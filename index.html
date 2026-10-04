@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Payday Planner | Make saving a payday decision</title>
+  <meta name="description" content="A concept for your first paydays: a savings split for emergencies, near-term goals and long-term investing, with clear reasons. Explore the planned early-access offer.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Payday Planner | Make saving a payday decision">
+  <meta property="og:description" content="Save with a plan you understand. Explore a concept for dividing payday savings between emergencies, near-term goals and long-term investing.">
+  <meta name="theme-color" content="#0E1B3D">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%230E1B3D'/%3E%3Cpath d='M11 29V11h10a7 7 0 0 1 0 14h-4v-5h4a2 2 0 0 0 0-4h-5v13z' fill='white'/%3E%3C/svg%3E">
+  <style>
+    /* Design tokens: change the palette and spacing here. */
+    :root { --navy:#0E1B3D; --ink:#0E1B3D; --muted:#4f6170; --accent:#4338CA; --green:#0A7D5C; --amber:#FFC857; --lavender:#EEF0FF; --mint:#E6F7F1; --cream:#FFF4E0; --pale:var(--mint); --line:#d6e0e5; --paper:var(--lavender); --white:#fff; --radius:18px; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; scroll-padding-top:100px; }
+    body { margin:0; color:var(--navy); background:var(--white); font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; line-height:1.65; }
+    h1,h2,h3,p { margin:0; }
+    h1,h2,h3 { line-height:1.15; }
+    h1 { font-size:clamp(2.1rem,4.2vw,3.4rem); letter-spacing:-.03em; font-weight:750; }
+    h2 { font-size:clamp(2rem,3.4vw,2.9rem); letter-spacing:-.04em; }
+    h3 { font-size:1.18rem; letter-spacing:-.02em; }
+    p + p { margin-top:1rem; }
+    a { color:var(--accent); }
+    button,input { font:inherit; }
+    a,button,input,summary { -webkit-tap-highlight-color:transparent; }
+    :focus-visible { outline:3px solid var(--accent); outline-offset:5px; }
+    .dark :focus-visible { outline-color:#fff; }
+    .wrap { width:min(1120px,calc(100% - 40px)); margin-inline:auto; }
+    .section { padding-block:76px; }
+    .eyebrow { display:block; margin-bottom:18px; font-size:.74rem; font-weight:750; letter-spacing:.15em; text-transform:uppercase; color:var(--accent); }
+    .intro { max-width:650px; margin-bottom:36px; }
+    .intro p { margin-top:18px; color:var(--muted); }
+    .small { font-size:.85rem; color:var(--muted); }
+    .button { display:inline-flex; align-items:center; justify-content:center; gap:20px; min-height:48px; padding:13px 22px; border:1px solid transparent; border-radius:7px; background:var(--accent); color:white; font-size:.92rem; font-weight:650; text-decoration:none; cursor:pointer; transition:background .18s,transform .18s; }
+    .button:hover { background:#3529a8; transform:translateY(-1px); }
+    .button:disabled { opacity:.65; cursor:not-allowed; transform:none; }
+    .skip { position:fixed; left:16px; top:-100px; z-index:20; padding:12px; background:white; }
+    .skip:focus { top:12px; }
+    /* Header and hero. The compact savings card is illustrative, not a forecast. */
+    .header { position:sticky; top:0; z-index:10; background:var(--white); border-bottom:1px solid var(--line); }
+    .header-inner { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:80px; }
+    .brand { display:flex; align-items:center; gap:9px; font-size:1rem; font-weight:750; letter-spacing:-.035em; text-decoration:none; }
+    .brand svg { width:29px; height:29px; flex-shrink:0; }
+    nav { display:none; }
+    .header .button { padding:10px 13px; font-size:.78rem; }
+    .hero { padding-block:36px 40px; background:linear-gradient(110deg,var(--white) 58%,var(--lavender)); }
+    .hero-grid { display:grid; gap:48px; align-items:center; }
+    .hero h1 span { color:var(--accent); }
+    .hero-copy { max-width:650px; background:var(--white); }
+    .hero-copy > p { max-width:570px; margin-block:24px; color:var(--muted); font-size:1.08rem; }
+    .hero .small { margin-top:14px; }
+    /* Story sections and responsive grids. */
+    .problem { border-block:1px solid var(--line); }
+    .two-col { display:grid; gap:32px; }
+    .prose { color:var(--muted); font-size:1.08rem; }
+    .steps { display:grid; gap:0; padding:0; margin:36px 0 0; list-style:none; counter-reset:habit; }
+    .steps li { position:relative; padding:24px 0; border-top:1px solid var(--line); counter-increment:habit; }
+    .steps li::before { content:"0" counter(habit); display:block; color:var(--accent); font-size:.8rem; font-weight:750; margin-bottom:20px; }
+    .steps p { color:var(--muted); margin-top:12px; font-size:.94rem; }
+    .soft { background:var(--paper); }
+    .cards { display:grid; gap:18px; }
+    .card { padding:28px; border:1px solid var(--line); background:white; border-radius:var(--radius); }
+    .card .number { display:block; margin-bottom:24px; color:var(--accent); font-size:.8rem; font-weight:750; }
+    .card p { color:var(--muted); margin-top:16px; font-size:.95rem; }
+    .sample-layout { display:grid; gap:36px; align-items:center; }
+    .sample { border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; background:white; box-shadow:0 18px 50px #0E1B3D08; }
+    .sample-head { padding:28px; background:var(--navy); color:white; }
+    .sample-head span { display:block; font-size:.8rem; color:#d4e0e8; }
+    .sample-head strong { display:block; margin-top:8px; font-size:2.7rem; letter-spacing:-.04em; line-height:1.2; }
+    .sample-body { padding:8px 28px 24px; }
+    .allocation { padding:21px 0; border-bottom:1px solid var(--line); }
+    .allocation:last-of-type { border-bottom:0; }
+    .allocation-title { display:flex; justify-content:space-between; gap:16px; font-size:.98rem; }
+    .allocation-title strong { white-space:nowrap; }
+    .allocation-title h3 { display:flex; align-items:baseline; gap:8px; }
+    .allocation-dot { width:8px; height:8px; flex:0 0 8px; border-radius:50%; background:var(--green); }
+    .allocation-dot.goal { background:var(--accent); }
+    .allocation-dot.investing { background:var(--navy); }
+    .allocation p { margin-top:6px; font-size:.88rem; color:var(--muted); }
+    .dark { background:var(--navy); color:white; }
+    .dark .eyebrow { color:var(--lavender); }
+    .trust-grid > div { border-top:3px solid var(--accent); padding-top:18px; }
+    .trust-grid > div:nth-child(2) { border-color:var(--green); }
+    .trust-grid { display:grid; gap:30px; margin-top:40px; }
+    .trust-grid h3 { margin-bottom:12px; }
+    .trust-grid p,.dark .small { color:#d4e0e8; }
+    .no-returns { margin-top:36px; padding-top:22px; border-top:1px solid #476074; font-weight:600; }
+    /* Prototype form: no endpoint, storage, analytics or payment integration. */
+    .access { display:grid; gap:36px; align-items:start; }
+    .offer { font-size:1.3rem; margin-block:24px 14px; }
+    .offer strong { font-size:2.8rem; letter-spacing:-.05em; }
+    .terms { color:var(--muted); max-width:510px; }
+    form { padding:28px; background:white; border:1px solid var(--line); border-radius:var(--radius); }
+    form h3 { margin-bottom:12px; }
+    label { display:block; font-size:.9rem; font-weight:650; margin-block:20px 7px; }
+    input { width:100%; min-width:0; padding:12px; border:1px solid #7e909e; border-radius:6px; color:var(--navy); background:white; }
+    form .button { width:100%; margin-top:22px; }
+    #form-status { margin-top:16px; padding:14px; border-left:3px solid var(--accent); background:var(--pale); font-size:.9rem; }
+    #form-status:empty { display:none; }
+    .founder { max-width:790px; margin-inline:auto; }
+    .founder blockquote { margin:26px 0 20px; padding-left:24px; border-left:3px solid var(--accent); font-size:clamp(1.2rem,2.3vw,1.6rem); line-height:1.6; letter-spacing:-.02em; }
+    .founder blockquote ul { padding-left:22px; margin-block:18px; }
+    .founder blockquote li + li { margin-top:12px; }
+    .faq { max-width:820px; margin-inline:auto; }
+    details { border-bottom:1px solid var(--line); }
+    summary { position:relative; padding:24px 36px 24px 0; cursor:pointer; font-weight:650; list-style:none; line-height:1.5; }
+    summary::-webkit-details-marker { display:none; }
+    summary::after { content:"+"; position:absolute; right:4px; top:20px; font-size:1.5rem; color:var(--accent); }
+    details[open] summary::after { content:"−"; }
+    details p { padding:0 36px 24px 0; color:var(--muted); }
+    .closing { text-align:center; padding-block:64px; background:var(--accent); color:white; }
+    .closing p { margin:18px auto 26px; max-width:500px; color:white; }
+    .closing .eyebrow { color:white; }
+    .closing .button { background:var(--amber); color:var(--ink); }
+    .closing .button:hover { background:#edb43f; }
+    .closing :focus-visible { outline-color:white; }
+    footer { padding-block:30px; }
+    footer .wrap { display:flex; flex-wrap:wrap; gap:20px; justify-content:space-between; align-items:center; }
+    footer p { max-width:650px; font-size:.8rem; color:var(--muted); }
+    @media (min-width:760px) {
+      .section { padding-block:96px; }
+      nav { display:flex; gap:26px; margin-left:auto; margin-right:20px; font-size:.85rem; }
+      nav a { text-decoration:none; }
+      nav a:hover { text-decoration:underline; text-underline-offset:5px; }
+      .header .button { font-size:.86rem; padding:12px 18px; }
+      .brand { font-size:1.15rem; }
+      .hero { padding-block:48px; }
+      .two-col { grid-template-columns:1fr 1fr; gap:80px; }
+      .steps { grid-template-columns:repeat(4,1fr); gap:26px; }
+      .cards,.trust-grid { grid-template-columns:repeat(3,1fr); }
+      .sample-layout,.access { grid-template-columns:1fr 1fr; gap:80px; }
+    }
+    /* Static SVG charts: labels stay outside narrow slices and bars. */
+    .mint { background:var(--mint); }
+    .donut { display:block; width:min(100%,230px); height:auto; margin:24px auto; overflow:visible; }
+    .donut text { fill:var(--ink); font-family:inherit; text-anchor:middle; }
+    .donut .donut-value { font-size:25px; font-weight:750; }
+    .donut .donut-caption { font-size:15px; }
+    .donut .saved-value { fill:var(--green); }
+    .sample-donut { width:180px; }
+    .sample-head strong { color:white; }
+    .allocation-title strong { color:var(--green); }
+    .chart-legend { padding:0; margin:0; list-style:none; }
+    .chart-legend li { display:flex; justify-content:space-between; align-items:baseline; gap:14px; padding:10px 0; border-top:1px solid var(--line); }
+    .chart-legend strong { white-space:nowrap; }
+    .legend-label { display:flex; align-items:baseline; gap:9px; }
+    .swatch { display:inline-block; width:10px; height:10px; flex:0 0 10px; border-radius:50%; }
+    .essentials { background:var(--ink); }
+    .spending { background:var(--amber); }
+    .saved { background:var(--green); }
+    .results { margin-top:32px; padding:clamp(20px,4vw,36px); background:white; border:1px solid var(--line); border-radius:var(--radius); }
+    .results h3 { font-size:1.6rem; }
+    .result-row { margin-top:28px; }
+    .result-heading { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px 20px; }
+    .result-total { color:var(--green); font-weight:750; }
+    .result-bar { display:block; width:100%; height:28px; margin-block:12px; }
+    .result-breakdown { display:flex; flex-wrap:wrap; gap:8px 24px; font-size:.95rem; }
+    .result-breakdown .swatch { margin-right:7px; border-radius:2px; }
+    .growth-swatch { background:#BCE8D9; border:1px solid var(--green); }
+    .assumptions { margin-top:24px; padding:18px; border:1px solid var(--line); border-radius:8px; background:var(--mint); color:var(--ink); font-size:1rem; }
+    .difference { margin-top:24px; padding:20px; background:var(--cream); border-left:4px solid var(--amber); color:var(--ink); font-size:1.1rem; font-weight:650; }
+    .formula { display:block; margin-block:12px; padding:12px; background:white; border-radius:6px; overflow-wrap:anywhere; }
+    .header .brand { color:var(--ink); }
+    .hero-grid > *, .sample-layout > *, .access > * { min-width:0; }
+    /* Four navigation links need more room than the previous three. */
+    @media (min-width:760px) and (max-width:979px) { nav { display:none; } }
+    /* Hero comparison stays visible on phones; labels remain separate from colours. */
+    .hero .wrap { width:min(1240px,calc(100% - 40px)); }
+    .hero-comparison { padding:18px; background:white; border:1px solid var(--line); border-radius:var(--radius); box-shadow:0 18px 50px #0E1B3D08; }
+    .hero-comparison h2 { font-size:1.4rem; line-height:1.25; letter-spacing:-.025em; }
+    .hero-comparison-intro { margin-top:12px; color:var(--muted); font-size:.94rem; }
+    .hero-approaches { display:grid; gap:24px; margin-top:24px; }
+    .hero-approach { min-width:0; }
+    .hero-approach h3 { font-size:.95rem; line-height:1.3; }
+    .hero-approach .donut { width:min(100%,150px); margin:12px auto; }
+    .hero-approach .donut-caption { font-size:20px; }
+    .hero-approach .chart-legend { font-size:.85rem; }
+    .hero-approach .chart-legend li { display:block; padding:8px 0; }
+    .hero-approach .chart-legend strong { display:block; padding-left:19px; }
+    @media (min-width:380px) {
+      .hero-approaches { grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+      .hero-approach .legend-label { min-height:2.8em; }
+    }
+    @media (min-width:600px) {
+      .hero-comparison { padding:24px; }
+      .hero-approach .chart-legend li { display:flex; gap:8px; }
+      .hero-approach .chart-legend strong { padding-left:0; }
+      .hero-approach .legend-label { min-height:0; }
+    }
+    @media (min-width:1100px) {
+      .hero-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:36px; }
+      .hero h1 { font-size:clamp(2.1rem,3vw,2.55rem); }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      html { scroll-behavior:auto; }
+      *,*::before,*::after { transition:none !important; animation:none !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <!-- 1. Sticky navigation -->
+  <header class="header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#" aria-label="Payday Planner home">
+        <svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0E1B3D"/><path d="M10 24V8h8a6 6 0 0 1 0 12h-3v-4h3a2 2 0 0 0 0-4h-4v12z" fill="white"/></svg>
+        Payday Planner
+      </a>
+      <nav aria-label="Main navigation"><a href="#why-it-matters">Why it matters</a><a href="#how-it-works">How it works</a><a href="#sample-plan">Sample plan</a><a href="#faq">FAQs</a></nav>
+      <a class="button" href="#early-access">Join early access</a>
+    </div>
+  </header>
+  <main id="main">
+    <!-- 2. Hero -->
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow">Your first salary. Your own priorities.</span>
+          <h1 id="hero-title">“I’ll save whatever’s left” gives every purchase a chance to <span>come first.</span></h1>
+          <p>Make saving a payday decision. Payday Planner recommends how much to set aside and how to split it between emergencies, near-term goals and long-term investing, with a clear reason for each.</p>
+          <a class="button" href="#early-access">Join early access <span aria-hidden="true">↓</span></a>
+          <div class="small">Early-access preview</div>
+        </div>
+        <aside class="hero-comparison" aria-labelledby="hero-comparison-title">
+          <h2 id="hero-comparison-title">Same ₹50,000 salary. Different order.</h2>
+          <p class="hero-comparison-intro">Two imagined people spend ₹30,000 on essentials and EMIs. The difference is when they save.</p>
+        <div class="hero-approaches">
+          <article class="hero-approach">
+            <h3>Saves what’s left</h3>
+            <svg class="donut " viewBox="0 0 220 220" role="img" aria-label="Saves what is left: monthly salary fifty thousand rupees; essentials and EMIs thirty thousand rupees; other spending eighteen thousand rupees; saved two thousand rupees.">
+              <path d="M 110.0000 28.0000 A 82 82 0 1 1 61.8016 176.3394" fill="none" stroke="var(--ink)" stroke-width="24"/><path d="M 61.8016 176.3394 A 82 82 0 0 1 89.6074 30.5762" fill="none" stroke="var(--amber)" stroke-width="24"/><path d="M 89.6074 30.5762 A 82 82 0 0 1 110.0000 28.0000" fill="none" stroke="var(--green)" stroke-width="24"/>
+              <text class="donut-value saved-value" x="110" y="108">₹2,000</text><text class="donut-caption" x="110" y="131">saved</text>
+            </svg>
+            <ul class="chart-legend">
+              <li><span class="legend-label"><span class="swatch essentials" aria-hidden="true"></span>Essentials and EMIs</span><strong>₹30,000</strong></li>
+              <li><span class="legend-label"><span class="swatch spending" aria-hidden="true"></span>Other spending</span><strong>₹18,000</strong></li>
+              <li><span class="legend-label"><span class="swatch saved" aria-hidden="true"></span>Saved</span><strong>₹2,000</strong></li>
+            </ul>
+          </article>
+          <article class="hero-approach">
+            <h3>Saves first</h3>
+            <svg class="donut " viewBox="0 0 220 220" role="img" aria-label="Saves first: monthly salary fifty thousand rupees; essentials and EMIs thirty thousand rupees; saved ten thousand rupees; other spending ten thousand rupees.">
+              <path d="M 110.0000 28.0000 A 82 82 0 1 1 61.8016 176.3394" fill="none" stroke="var(--ink)" stroke-width="24"/><path d="M 61.8016 176.3394 A 82 82 0 0 1 32.0134 84.6606" fill="none" stroke="var(--green)" stroke-width="24"/><path d="M 32.0134 84.6606 A 82 82 0 0 1 110.0000 28.0000" fill="none" stroke="var(--amber)" stroke-width="24"/>
+              <text class="donut-value saved-value" x="110" y="108">₹10,000</text><text class="donut-caption" x="110" y="131">saved</text>
+            </svg>
+            <ul class="chart-legend">
+              <li><span class="legend-label"><span class="swatch essentials" aria-hidden="true"></span>Essentials and EMIs</span><strong>₹30,000</strong></li>
+              <li><span class="legend-label"><span class="swatch spending" aria-hidden="true"></span>Other spending</span><strong>₹10,000</strong></li>
+              <li><span class="legend-label"><span class="swatch saved" aria-hidden="true"></span>Saved</span><strong>₹10,000</strong></li>
+            </ul>
+          </article>
+        </div>
+        </aside>
+      </div>
+    </section>
+    <!-- Illustrative comparison. End-of-month contributions, nominal 8% / 12, 360 months.
+         Exact future values: 2,980,718.8973 and 14,903,594.4866 rupees.
+         Bars share a 14,903,594.4866 rupee scale; the first total is exactly 20% of the second. -->
+    <section class="section soft" id="why-it-matters" aria-labelledby="order-title">
+      <div class="wrap">
+        <div class="intro"><span class="eyebrow">Why the order matters</span><h2 id="order-title">30 years later</h2><p>Both people save every month at the same assumed rate. Only the order differs.</p></div>
+        <div class="results">
+          <p class="small">Illustrative totals on a shared scale. Money put in is solid green; assumed growth is light green.</p>
+          <p class="difference">That ₹8,000 a month difference becomes about ₹1.19 crore after 30 years, under the assumptions below.</p>
+          <div class="result-row">
+            <div class="result-heading"><strong>Saves what’s left</strong><span class="result-total">Total: about ₹29.8 lakh</span></div>
+            <svg class="result-bar" viewBox="0 0 1000 28" preserveAspectRatio="none" role="img" aria-label="Saves what is left after thirty years: money put in seven point two lakh rupees; assumed growth about twenty-two point six lakh rupees; total about twenty-nine point eight lakh rupees. One fifth of the second bar on the same scale.">
+              <rect width="1000" height="28" rx="4" fill="var(--lavender)"/>
+              <rect width="48.310493" height="28" fill="var(--green)"/><rect x="48.310493" width="151.689507" height="28" fill="#BCE8D9"/>
+            </svg>
+            <div class="result-breakdown"><span><span class="swatch saved" aria-hidden="true"></span>Money put in: ₹7.2 lakh</span><span><span class="swatch growth-swatch" aria-hidden="true"></span>Assumed growth: about ₹22.6 lakh</span></div>
+          </div>
+          <div class="result-row">
+            <div class="result-heading"><strong>Saves first</strong><span class="result-total">Total: about ₹1.49 crore</span></div>
+            <svg class="result-bar" viewBox="0 0 1000 28" preserveAspectRatio="none" role="img" aria-label="Saves first after thirty years: money put in thirty-six lakh rupees; assumed growth about one point one three crore rupees; total about one point four nine crore rupees. Five times the first bar on the same scale.">
+              <rect width="241.552466" height="28" fill="var(--green)"/><rect x="241.552466" width="758.447534" height="28" fill="#BCE8D9"/>
+            </svg>
+            <div class="result-breakdown"><span><span class="swatch saved" aria-hidden="true"></span>Money put in: ₹36 lakh</span><span><span class="swatch growth-swatch" aria-hidden="true"></span>Assumed growth: about ₹1.13 crore</span></div>
+          </div>
+          <p class="assumptions">Assumptions: contributions at the end of each month, 8% a year assumed growth compounded monthly, 30 years, before inflation and taxes, shown in future rupees. This is an illustration, not a forecast or a promise. Real returns vary and can be lower or negative.</p>
+        </div>
+      </div>
+    </section>
+    <!-- 3. The problem -->
+    <section class="section problem" aria-labelledby="problem-title">
+      <div class="wrap two-col">
+        <div><span class="eyebrow">The leftover problem</span><h2 id="problem-title">Good intentions need<br>a place in the plan.</h2></div>
+        <div class="prose"><p>When saving waits until the end of the month, every purchase gets to go first.</p><p>Something optional can start to feel essential. And the amount you meant to save becomes whatever happens to remain.</p><p>A payday decision gives saving a place before the spending begins.</p></div>
+      </div>
+    </section>
+    <!-- 4. The four-step habit -->
+    <section class="section mint" aria-labelledby="habit-title">
+      <div class="wrap"><span class="eyebrow">A habit to start with</span><h2 id="habit-title">Plan for life. Then save first.</h2>
+        <ol class="steps">
+          <li><h3>Allow for essentials and EMIs</h3><p>Make room for the expenses and repayments you need to cover.</p></li>
+          <li><h3>Choose an affordable amount</h3><p>Decide what you can comfortably set aside this payday.</p></li>
+          <li><h3>Save first</h3><p>Carry out your savings plan through your own bank or investment platform.</p></li>
+          <li><h3>Spend what’s left</h3><p>Let the remaining amount guide your spending.</p></li>
+        </ol>
+      </div>
+    </section>
+    <!-- 5. Product explanation -->
+    <section class="section" id="how-it-works" aria-labelledby="how-title">
+      <div class="wrap"><div class="intro"><span class="eyebrow">How it works</span><h2 id="how-title">A savings plan.<br>And the reasons behind it.</h2><p>Everything starts with your own numbers, so you can see why each recommendation is made before you decide.</p><p>Not a budget tracker. It does not track your spending. It starts from the amount you decide to save and shows where it should go.</p></div>
+        <div class="cards">
+          <article class="card"><span class="number">01 / YOUR INPUTS</span><h3>Start with your situation</h3><p>Enter your saving amount, expenses, EMIs, existing savings and goals. Answer a few questions about your comfort with risk.</p></article>
+          <article class="card"><span class="number">02 / YOUR PLAN</span><h3>See what goes where</h3><p>Get a recommendation for how much to set aside and how to divide it between emergencies, near-term goals and long-term investing, with a plain-language reason for each split.</p></article>
+          <article class="card"><span class="number">03 / YOUR NEXT PAYDAY</span><h3>Adjust as life changes</h3><p>A salary increase or a new expense? Update your inputs and your plan updates too.</p></article>
+        </div>
+      </div>
+    </section>
+    <!-- 6. Hypothetical example: 5,000 + 3,000 + 2,000 = 10,000. -->
+    <section class="section soft" id="sample-plan" aria-labelledby="sample-title">
+      <div class="wrap sample-layout">
+        <div class="intro"><span class="eyebrow">A sample payday plan</span><h2 id="sample-title">One amount.<br>Three clear purposes.</h2><p>Imagine a first-job employee with ₹10,000 left to save after essentials and EMIs, no emergency savings yet, and a purchase planned in a few months.</p><p class="small">Illustrative example only. These figures are not advice or a prediction. They are not a recommendation for you.</p></div>
+        <article class="sample" aria-label="Illustrative split of ten thousand rupees">
+          <div class="sample-head"><span>ILLUSTRATIVE EXAMPLE / PAYDAY SAVINGS</span><strong>₹10,000</strong></div>
+          <div class="sample-body">
+            <div class="allocation"><div class="allocation-title"><h3><span class="allocation-dot" aria-hidden="true"></span>Emergency buffer</h3><strong>₹5,000</strong></div><p>No emergency savings yet, so this comes first.</p></div>
+            <div class="allocation"><div class="allocation-title"><h3><span class="allocation-dot goal" aria-hidden="true"></span>Near-term goal</h3><strong>₹3,000</strong></div><p>A purchase planned in a few months needs money set aside now.</p></div>
+            <div class="allocation"><div class="allocation-title"><h3><span class="allocation-dot investing" aria-hidden="true"></span>Long-term investing</h3><strong>₹2,000</strong></div><p>A small start for goals years away.</p></div>
+            <svg class="donut sample-donut" viewBox="0 0 220 220" role="img" aria-label="Illustrative payday savings total ten thousand rupees: emergency buffer five thousand rupees, near-term goal three thousand rupees, long-term investing two thousand rupees. Not advice or a prediction.">
+              <path d="M 110.0000 28.0000 A 82 82 0 0 1 110.0000 192.0000" fill="none" stroke="var(--green)" stroke-width="24"/><path d="M 110.0000 192.0000 A 82 82 0 0 1 32.0134 84.6606" fill="none" stroke="var(--accent)" stroke-width="24"/><path d="M 32.0134 84.6606 A 82 82 0 0 1 110.0000 28.0000" fill="none" stroke="var(--ink)" stroke-width="24"/>
+              <text class="donut-value" x="110" y="108">₹10,000</text><text class="donut-caption" x="110" y="131">total savings</text>
+            </svg>
+          </div>
+        </article>
+      </div>
+    </section>
+    <!-- 7. Responsibility -->
+    <section class="section dark" aria-labelledby="trust-title">
+      <div class="wrap"><span class="eyebrow">You stay in control</span><h2 id="trust-title">Recommendations you can understand.<br>Decisions that stay yours.</h2>
+        <div class="trust-grid">
+          <div><h3>It never acts for you</h3><p>You decide and carry out the plan through your own bank or investment platform.</p></div>
+          <div><h3>No bank linking</h3><p>Payday Planner never links your bank accounts.</p></div>
+          <div><h3>No bank details</h3><p>It never asks for your bank details.</p></div>
+        </div><p class="no-returns">No returns are promised.</p>
+      </div>
+    </section>
+    <!-- 8. Planned offer and deliberately disconnected form -->
+    <section class="section mint" id="early-access" aria-labelledby="access-title">
+      <div class="wrap access">
+        <div><span class="eyebrow">Planned early-access offer</span><h2 id="access-title">Start with a plan<br>you understand.</h2><p class="offer"><strong>Free</strong> for the first year.<br>Then ₹999 a year.</p><p class="terms">Under the planned offer, the subscription renews automatically at ₹999 a year after the free first year. You’ll receive multiple reminders before any payment is charged, and you can cancel anytime.</p></div>
+        <form id="access-form" aria-labelledby="form-title" aria-describedby="form-note">
+          <h3 id="form-title">Join early access</h3><p class="small" id="form-note">Prototype form only. Sign-ups are not connected yet. Please use sample details to try it.</p>
+          <label for="name">Name</label><input id="name" name="name" type="text" required maxlength="100" autocomplete="name" placeholder="Your name">
+          <label for="email">Email</label><input id="email" name="email" type="email" required maxlength="254" autocomplete="email" placeholder="you@example.com">
+          <button class="button" id="submit-button" type="submit" disabled>Join early access</button>
+          <p id="form-status" role="status" aria-live="polite" aria-atomic="true"></p>
+          <noscript><p class="small">This prototype needs JavaScript to show its demo message. Sign-ups are not connected and nothing is saved.</p></noscript>
+        </form>
+      </div>
+    </section>
+    <!-- 9. Personal founder experience -->
+    <section class="section" aria-labelledby="founder-title">
+      <div class="wrap"><div class="founder"><span class="eyebrow">A note from the founder</span><h2 id="founder-title">Understanding came first.</h2><blockquote>
+          <p>When I started earning, I didn’t know the range of investment options or which goals they suited.</p>
+          <ul>
+            <li>I invested in mutual funds through my bank’s app, choosing “regular” rather than “direct” plans without understanding the difference.</li>
+            <li>I underrated passive funds at first because I didn’t understand them.</li>
+            <li>I bought an insurance-and-investment policy that turned out to be one of my worst financial decisions.</li>
+          </ul>
+          <p>I wanted to understand my choices before making them. I built Payday Planner so more people starting out can understand their options.</p>
+        </blockquote><p class="small">Sai Gopal Sridhara, Founder</p></div></div>
+    </section>
+    <!-- 10. Native details elements work with keyboard and without JavaScript. -->
+    <section class="section soft" id="faq" aria-labelledby="faq-title">
+      <div class="wrap"><div class="faq"><div class="intro"><span class="eyebrow">A little more clarity</span><h2 id="faq-title">Before you get started.</h2></div>
+        <details><summary>What does Payday Planner do?</summary><p>It is for young professionals earning for the first time. It recommends how much to set aside each payday and how to divide it between emergencies, near-term goals and long-term investing, with a plain-language reason for each split.</p></details>
+        <details><summary>Is this a budgeting app?</summary><p>No. It does not track your spending; it starts from the amount you decide to save and shows where it should go.</p></details>
+        <details><summary>Does it connect to my bank?</summary><p>No. Payday Planner never links bank accounts and never asks for bank details.</p></details>
+        <details><summary>Who carries out the plan?</summary><p>You do, through your own bank or investment platform. Payday Planner recommends, but never acts for you. No returns are promised.</p></details>
+        <details><summary>What is the planned price?</summary><p>The planned early-access offer is free for the first year, then ₹999 a year.</p></details>
+        <details><summary>Will I be charged automatically?</summary><p>Under the planned offer, yes. The subscription renews automatically at ₹999 a year after the free first year. You will receive multiple reminders before any payment is charged, and you can cancel anytime.</p></details>
+        <details><summary>What if my salary or expenses change?</summary><p>Update your inputs after a salary increase or a new expense and your plan updates too.</p></details>
+        <details><summary>Are the example figures a forecast?</summary><p>No. The 30-year figures use an assumed 8% a year for illustration; actual returns vary and can be lower or negative, and the figures ignore inflation and taxes.</p></details>
+        <details><summary>Where do the 30 year numbers come from?</summary><p>We assume the same amount is contributed at the end of every month for 30 years, or 360 months. The assumed annual growth rate is 8%, divided by 12 for the monthly rate. Each contribution compounds monthly for the time remaining.<span class="formula">Future value = monthly amount × ((1 + i)<sup>n</sup> − 1) / i, where i = 0.08 / 12 and n = 360.</span>The total includes the money put in plus assumed growth. Figures are rounded, before inflation and taxes, and shown in future rupees. This is an illustration, not a forecast or a promise. Real returns vary and can be lower or negative.</p></details>
+        <details><summary>Can I sign up through this page now?</summary><p>Not yet. This is a concept prototype built for a course project. The form demonstrates the sign-up experience, but it does not send or save your details.</p></details>
+      </div></div>
+    </section>
+    <!-- 11. Final call to action -->
+    <section class="closing" aria-labelledby="closing-title"><div class="wrap"><span class="eyebrow">Make room for your priorities</span><h2 id="closing-title">Give saving a place on payday.</h2><p>Explore the planned early-access offer.</p><a class="button" href="#early-access">Join early access <span aria-hidden="true">↓</span></a></div></section>
+  </main>
+  <footer><div class="wrap"><strong>Payday Planner</strong><p>Payday Planner is a concept prototype built for a course project. Example figures are illustrative and no returns are promised.</p></div></footer>
+  <script>
+    /* Attach the guard before enabling submission. No data leaves this page. */
+    const form = document.getElementById('access-form');
+    const statusMessage = document.getElementById('form-status');
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      statusMessage.textContent = 'This is a prototype and sign-ups are not connected yet, so nothing was saved.';
+      form.reset();
+    });
+    document.getElementById('submit-button').disabled = false;
+  </script>
+</body>
+</html>
