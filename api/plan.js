@@ -45,10 +45,11 @@ export default async function handler(req,res) {
   let tokens = {input_tokens:null,output_tokens:null};
   try {
     const visitorId=visitor(req,res);
-    const previous=await db(`payday_plans?visitor_id=eq.${visitorId}&status=eq.ok&select=id&limit=1`);
-    if(previous.length) return res.status(403).json({code:'signup_required',error:'You have created your free trial plan. Sign up to continue with Payday Planner.'});
+
     const claim = await db('rpc/claim_payday_request',{method:'POST',body:JSON.stringify({p_visitor:visitorId,p_input:logInput(raw)})});
     if (!claim.id) {
+      if(claim.reason==='payment') return res.status(402).json({code:'payment_required',error:'Your six months of access without payment details have ended. Payment setup is required to continue. No payment has been taken; checkout is not connected in this assignment version.'});
+      if(claim.reason==='member_daily') return res.status(429).json({code:'member_daily',error:'You have used today’s five registered-user requests. Please try tomorrow.'});
       if(claim.reason==='signup') return res.status(403).json({code:'signup_required',error:'You have created your free trial plan. Sign up to continue with Payday Planner.'});
       return res.status(429).json({code:claim.reason,error:claim.reason==='pending' ? 'A plan is already being generated in this browser. Please wait for it to finish.' : claim.reason==='visitor' ? 'You have reached the retry limit for this trial. Please sign up to continue.' : 'The planner has reached its daily limit. Please try tomorrow.'});
     }

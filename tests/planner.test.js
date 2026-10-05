@@ -4,6 +4,8 @@ import {validateInput,allocation,validateOutput,NAMES,NOTE} from '../lib/plannin
 import {examplesFor,CATALOGUE} from '../lib/catalogue.js';
 import handler from '../api/plan.js';
 import statsHandler from '../api/stats.js';
+import signupHandler from '../api/signup.js';
+import trialHandler from '../api/trial.js';
 
 const typical = {take_home_pay:50000,essentials_and_emis:30000,amount_to_save:10000,emergency_savings:'none',purchase_planned:'yes',purchase_cost:36000,risk_comfort:'medium'};
 function output(x=typical) {
@@ -15,16 +17,19 @@ function req(body=typical,cookie) {
 function res() {
   return {headers:{},code:200,setHeader(k,v){this.headers[k]=v;},status(n){this.code=n;return this;},json(x){this.body=x;return this;}};
 }
-let calls, patches, modelOutput, modelStatus, claim, finishReason, previousPlans;
+let calls, patches, modelOutput, modelStatus, claim, finishReason, previousPlans, access, signupResult;
 beforeEach(()=>{
   process.env.SUPABASE_URL='https://database.example';
   process.env.SUPABASE_SERVICE_KEY='test-server-key';
   process.env.GEMINI_API_KEY='test-model-key';
   calls=[];patches=[];modelOutput=output();modelStatus=200;claim={id:'00000000-0000-4000-8000-000000000000'};finishReason='STOP';previousPlans=[];
+  access={registered:true,registered_at:'2026-10-05T06:00:00Z',payment_due_at:'2027-04-05T06:00:00Z',free_year_ends_at:'2027-10-05T06:00:00Z',payment_required:false,daily_limit_reached:false,requests_remaining_today:5,used:true,retry_limit_reached:false};signupResult=null;
   global.fetch = async (url,options) => {
     calls.push({url,options});
     if (url.includes('/rest/v1/payday_plans?') && options.method !== 'PATCH') return Response.json(previousPlans);
     if (url.includes('/rpc/claim_payday_request')) return Response.json(claim);
+    if (url.includes('/rpc/register_payday_visitor')) return Response.json(signupResult||access);
+    if (url.includes('/rpc/payday_access')) return Response.json(access);
     if (url.includes('/rpc/payday_stats')) return Response.json({plans_generated:2,sample_size:2,average_saving_share:25});
     if (options.method === 'PATCH') { patches.push(JSON.parse(options.body));return new Response(null,{status:204}); }
     if (url.includes('generativelanguage')) return modelStatus===200 ? Response.json({candidates:[{finishReason,content:{parts:[{text:JSON.stringify(modelOutput)}]}}],usageMetadata:{promptTokenCount:900,candidatesTokenCount:250,thoughtsTokenCount:10}}) : new Response(null,{status:modelStatus});
@@ -71,8 +76,8 @@ test('injected free text and extra personal fields are not stored',async()=>{
   const stored=JSON.parse(calls.find(c=>c.url.includes('/rpc/claim_payday_request')).options.body).p_input;
   assert.equal(stored.purchase_cost,'[invalid]');assert.ok(!stored.email);assert.ok(!JSON.stringify(stored).includes('Personal'));
 });
-test('capped request never calls model or updates table',async()=>{claim={reason:'visitor'};const r=res();await handler(req(),r);assert.equal(r.code,429);assert.equal(patches.length,0);assert.equal(calls.length,2);});
-test('daily quota cap never calls model',async()=>{claim={reason:'daily'};const r=res();await handler(req(),r);assert.equal(r.code,429);assert.match(r.body.error,/daily/);assert.equal(calls.length,2);});
+test('capped request never calls model or updates table',async()=>{claim={reason:'visitor'};const r=res();await handler(req(),r);assert.equal(r.code,429);assert.equal(patches.length,0);assert.equal(calls.length,1);});
+test('daily quota cap never calls model',async()=>{claim={reason:'daily'};const r=res();await handler(req(),r);assert.equal(r.code,429);assert.match(r.body.error,/daily/);assert.equal(calls.length,1);});
 test('signed cookie carries same visitor and tampering creates a new identity',async()=>{
   const r1=res();await handler(req(),r1);const cookie=r1.headers['Set-Cookie'].split(';')[0];const id1=JSON.parse(calls.find(c=>c.url.includes('/rpc/claim_payday_request')).options.body).p_visitor;
   calls=[];await handler(req(typical,cookie),res());assert.equal(JSON.parse(calls.find(c=>c.url.includes('/rpc/claim_payday_request')).options.body).p_visitor,id1);
@@ -117,7 +122,7 @@ test('cross-origin and wrong methods are blocked',async()=>{const r=res();const 
 test('stats endpoint returns only aggregate database result',async()=>{const r=res();await statsHandler({method:'GET'},r);assert.deepEqual(r.body,{plans_generated:2,sample_size:2,average_saving_share:25});assert.ok(!JSON.stringify(r.body).includes('visitor'));});
 
 test('one successful trial blocks more Gemini calls and returns signup action',async()=>{
- previousPlans=[{id:'prior',status:'ok'}];const r=res();await handler(req(),r);
+ claim={reason:'signup'};const r=res();await handler(req(),r);
  assert.equal(r.code,403);assert.equal(r.body.code,'signup_required');
  assert.equal(calls.length,1);assert.equal(patches.length,0);
 });
@@ -144,4 +149,43 @@ test('unsafe explanations report the failing check without reproducing model cla
 test('truncation tells the visitor why the plan could not be shown',async()=>{
  finishReason='MAX_TOKENS';const r=res();await handler(req(),r);
  assert.equal(r.body.code,'incomplete_response');assert.match(r.body.error,/cut off/);
+});
+
+const registration=()=>({name:'Sample Visitor',email:'sample@example.com',consent:true});
+test('signup saves registration separately using signed visitor and returns dates',async()=>{
+ const r=res();await signupHandler(req(registration()),r);assert.equal(r.code,200);
+ const params=JSON.parse(calls[0].options.body);assert.equal(params.p_name,'Sample Visitor');assert.equal(params.p_email,'sample@example.com');
+ assert.equal(r.body.status,'registered');assert.equal(r.body.payment_due_at,'2027-04-05T06:00:00Z');
+ assert.ok(!JSON.stringify(r.body).includes('sample@example.com'));
+ assert.ok(calls.every(c=>!c.url.includes('generativelanguage')));assert.equal(patches.length,0);
+});
+test('signup requires consent and rejects extra payment fields without storing them',async()=>{
+ for(const body of [{...registration(),consent:false},{...registration(),email:'bad'},{...registration(),card:'4111111111111111'},{...registration(),name:'<script>'}]) {
+  calls=[];const r=res();await signupHandler(req(body),r);assert.equal(r.code,400);assert.equal(calls.length,0);
+ }
+});
+test('registration rate limit gives useful feedback',async()=>{
+ signupResult={error:'Registration has reached its daily limit. Please try tomorrow.'};
+ const r=res();await signupHandler(req(registration()),r);assert.equal(r.code,429);assert.match(r.body.error,/daily limit/);
+});
+test('registration storage failure never claims account activation',async()=>{
+ global.fetch=async()=>new Response(null,{status:500});const r=res();await signupHandler(req(registration()),r);
+ assert.equal(r.code,503);assert.ok(!r.body.registered);assert.match(r.body.error,/could not be saved/);
+});
+test('registration blocks cross-origin calls before personal fields are stored',async()=>{
+ const q=req(registration());q.headers.origin='https://other.example';const r=res();await signupHandler(q,r);assert.equal(r.code,403);assert.equal(calls.length,0);
+});
+test('registered access resumes planning after the public trial',async()=>{
+ const r=res();await trialHandler({method:'GET',headers:{}},r);
+ assert.equal(r.body.registered,true);assert.equal(r.body.payment_required,false);assert.equal(r.body.requests_remaining_today,5);
+ calls=[];const result=res();await handler(req(),result);assert.equal(result.code,200);
+});
+test('six-month cutoff blocks Gemini and points to payment setup without charging',async()=>{
+ claim={reason:'payment'};const r=res();await handler(req(),r);
+ assert.equal(r.code,402);assert.equal(r.body.code,'payment_required');assert.match(r.body.error,/six months/);
+ assert.equal(calls.length,1);assert.equal(patches.length,0);assert.ok(!calls.some(c=>c.url.includes('generativelanguage')));
+});
+test('registered-user daily cap has separate feedback from sign-up gate',async()=>{
+ claim={reason:'member_daily'};const r=res();await handler(req(),r);
+ assert.equal(r.code,429);assert.equal(r.body.code,'member_daily');assert.match(r.body.error,/today/);assert.equal(calls.length,1);
 });

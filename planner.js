@@ -6,12 +6,41 @@ let latestPlan;
 let latestInput;
 let trialUsed=false;
 let trialBlocked=false;
+let registered=false;
+let paymentRequired=false;
+let memberDailyLimit=false;
 const signupNudge=document.getElementById("signup-nudge");
+const signupForm=document.getElementById("access-form");
+const registrationStatus=document.getElementById("registration-status");
+const formatDate=value=>new Intl.DateTimeFormat('en-IN',{dateStyle:'medium'}).format(new Date(value));
 function applyTrialState() {
-  signupNudge.hidden=!trialBlocked;
+  signupNudge.hidden=registered||!trialBlocked;
+  if(!registered&&trialBlocked) signupNudge.querySelector('p').textContent=trialUsed
+    ? 'You’ve used your free trial plan. Sign up with name and email to continue. No payment details now; add them after six months. First year free, then ₹999 a year.'
+    : 'We could not complete your trial within the retry limit. You have not received a free plan. You can register with name and email to continue without payment details.';
   const button=document.getElementById("generate-plan");
   button.disabled=trialBlocked;
-  button.textContent=trialBlocked ? "Sign up to create another plan" : "Create my payday plan";
+  button.textContent=paymentRequired ? 'Payment setup required' : memberDailyLimit ? 'Daily request limit reached' : trialBlocked ? 'Sign up to create another plan' : 'Create my payday plan';
+}
+function setAccess(access) {
+  registered=access.registered===true;
+  paymentRequired=access.payment_required===true;
+  memberDailyLimit=registered&&access.daily_limit_reached===true;
+  trialUsed=access.used===true;
+  trialBlocked=registered ? paymentRequired||memberDailyLimit : trialUsed||access.retry_limit_reached===true;
+  const headerSignup=document.querySelector('.header .button');
+  headerSignup.textContent=registered ? 'My planner' : 'Sign up';headerSignup.href=registered ? '#try-plan' : '#early-access';
+  signupForm.hidden=registered;
+  registrationStatus.hidden=!registered;
+  if(registered) {
+    registrationStatus.replaceChildren();
+    registrationStatus.append(node('h3','You’re registered in this browser'));
+    registrationStatus.append(node('p','Registered: '+formatDate(access.registered_at)+'. Payment setup required: '+formatDate(access.payment_due_at)+'. Your free year ends: '+formatDate(access.free_year_ends_at)+'.'));
+    registrationStatus.append(node('p','No payment details have been collected and no payment will be taken by this assignment version.','small'));
+    const link=node('a','Go to my planner','button');link.href='#try-plan';registrationStatus.append(link);
+    plannerStatus.textContent=paymentRequired ? 'Your six-month access period has ended. Secure payment setup must be connected to continue; no payment has been taken.' : memberDailyLimit ? 'You have used today’s five requests. Please try tomorrow.' : 'Registration is active. '+access.requests_remaining_today+' requests remain today. No payment details are needed now.';
+  } else if(trialBlocked) plannerStatus.textContent=trialUsed ? 'Your free trial plan is complete. Sign up to continue without payment details.' : 'This browser has reached the trial retry limit without a plan. Register to continue.';
+  applyTrialState();
 }
 const placeholder = document.getElementById("plan-placeholder");
 function node(tag,text,className) {
@@ -114,11 +143,13 @@ plannerForm.addEventListener('submit',async event => {
     const response = await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input),signal:AbortSignal.timeout(28000)});
     const data = await response.json();
     if (!response.ok || data.status !== 'ok') {
-      if(data.code==='signup_required'||data.code==='visitor'){trialBlocked=true;trialUsed=data.code==='signup_required';signupNudge.hidden=false;}
+      if(data.code==='signup_required'||data.code==='visitor'){trialBlocked=true;trialUsed=data.code==='signup_required';}
+      if(data.code==='payment_required'){registered=true;paymentRequired=true;trialBlocked=true;}
+      if(data.code==='member_daily'){registered=true;memberDailyLimit=true;trialBlocked=true;}
       throw new Error(data.reason || data.error || 'The plan could not be generated.');
     }
     latestPlan = data; latestInput = input; renderPlan(data);
-    trialUsed=true;trialBlocked=true;signupNudge.hidden=false;
+    trialUsed=true;trialBlocked=!registered;
     plannerStatus.textContent = 'Your plan is ready. The three amounts add up to '+money(input.amount_to_save)+'.';
     await refreshStats();
   } catch (error) {
@@ -127,19 +158,34 @@ plannerForm.addEventListener('submit',async event => {
 });
 refreshStats();
 async function refreshTrial() {
-  const button=document.getElementById('generate-plan');
-  button.disabled=true;
+  document.getElementById('generate-plan').disabled=true;
   try {
     const response=await fetch('/api/trial',{cache:'no-store',signal:AbortSignal.timeout(8000)});
     if(!response.ok) throw new Error();
-    const trial=await response.json();
-    trialUsed=trial.used;trialBlocked=trial.used||trial.retry_limit_reached;
-    if(trialBlocked) plannerStatus.textContent=trialUsed ? 'Your free trial plan is complete. Sign up to continue.' : 'This browser has reached the trial retry limit. Sign up to continue.';
-  } catch { /* The server still checks trial eligibility on every request. */ }
-  applyTrialState();
+    setAccess(await response.json());
+  } catch {
+    trialBlocked=true;
+    document.getElementById('generate-plan').disabled=true;
+    plannerStatus.textContent='Access setup is temporarily unavailable. The registration database update needs to be applied before this version can be used.';
+    signupNudge.hidden=true;
+    return;
+  }
 }
 refreshTrial();
-document.getElementById('access-form').addEventListener('submit',event=>{
+signupForm.addEventListener('submit',async event=>{
   event.preventDefault();
-  document.getElementById('form-status').textContent='Secure payment setup is not connected yet. Your details have not been sent or saved, and no account or subscription has been created.';
+  if(!signupForm.reportValidity()) return;
+  const status=document.getElementById('form-status');
+  const button=document.getElementById('signup-button');
+  button.disabled=true;status.textContent='Saving your registration…';
+  try {
+    const response=await fetch('/api/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      name:document.getElementById('signup-name').value,email:document.getElementById('signup-email').value,consent:document.getElementById('signup-consent').checked
+    }),signal:AbortSignal.timeout(10000)});
+    const data=await response.json();
+    if(!response.ok||data.status!=='registered') throw new Error(data.error||'Registration could not be saved.');
+    signupForm.reset();setAccess(data);
+  } catch(error) {
+    status.textContent=error.name==='TimeoutError' ? 'Registration may still complete. Refresh before trying again; your registration date will not be reset.' : error instanceof TypeError ? 'Could not connect. Please check your connection and try again.' : error.message;
+  } finally {button.disabled=false;}
 });
