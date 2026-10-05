@@ -65,16 +65,27 @@ function renderPlan(plan) {
     const examples = b.examples.filter(f => i !== 2 || showEquity);
     if (examples.length) {
       const details = node('details',null,'fund-examples');
-      details.append(node('summary','Fund examples to research'));
-      for (const f of examples) {
-        const entry = node('div',null,'fund-entry');
-        const link = node('a',f.name+' ('+f.plan+')');
-        link.href = f.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
-        entry.append(link,node('p',f.caution,'small'),node('p','Name and category checked: '+f.checked,'small'));
-        details.append(entry);
+      details.append(node('summary','Fund and asset examples to research'));
+      details.append(node('p','These are alternatives, not a shopping list. More funds in the same category do not necessarily add diversification. No extra allocation is assigned to these examples.','small'));
+      const categoryNames = {'liquid fund':'Cash and short-term debt / liquid funds','index fund':'Equity / index funds','large cap fund':'Equity / large-cap funds','flexi cap fund':'Equity / flexi-cap funds','gold ETF':'Commodities / gold ETFs','REIT':'Real estate / listed REITs'};
+      const groups = new Map();
+      for (const example of examples) {
+        if (!groups.has(example.type)) groups.set(example.type,[]);
+        groups.get(example.type).push(example);
+      }
+      for (const [type,entries] of groups) {
+        details.append(node('h4',categoryNames[type] || type));
+        if (entries.some(f=>f.research_only)) details.append(node('p','Optional diversification research for a high-risk, long-term plan. This asset class was not selected in the generated product types.','small'));
+        for (const f of entries) {
+          const entry = node('div',null,'fund-entry');
+          const link = node('a',f.name+' ('+f.plan+')');
+          link.href = f.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+          entry.append(link,node('p',f.caution,'small'),node('p','Name and category checked: '+f.checked,'small'));
+          details.append(entry);
+        }
       }
       card.append(details);
-    } else if (b.amount > 0 && i === 2) card.append(node('p','To view equity fund examples, choose medium or high risk and confirm you can leave this money invested for seven years.','small'));
+    } else if (b.amount > 0 && i === 2) card.append(node('p','To view equity fund examples, choose medium or high risk and confirm a seven-year horizon. Gold ETF and REIT examples appear only for high risk with the same horizon confirmation.','small'));
     planResult.append(card);
   }
   planResult.append(node('p',plan.note,'small'),node('p',plan.catalogue_note,'small'));

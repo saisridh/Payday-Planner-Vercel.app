@@ -95,7 +95,7 @@ export default async function handler(req,res) {
       await save('error',{status:'error',reason,code,model_response:rawOutput});
       return res.status(502).json({code,error:'We could not show this plan. '+reason+' No plan was accepted. You can retry without using your successful trial plan.'});
     }
-    const output = {...plan,buckets:plan.buckets.map((b,i)=>({...b,examples:examplesFor(b,i)})),catalogue_note:'Illustrative examples from a small HDFC Mutual Fund catalogue, not a ranking or endorsement. Other providers are available. Names checked on 5 October 2026; examples expire after 30 days without review.'};
+    const output = {...plan,buckets:plan.buckets.map((b,i)=>({...b,examples:examplesFor(b,i,new Date(),undefined,input.risk_comfort)})),catalogue_note:'Illustrative examples from a small catalogue of HDFC and SBI funds, gold ETFs and listed REITs. These are alternatives to research, not a ranking, endorsement or instruction to spread your money across every example. Check product minimums and costs. Names checked on 5 October 2026; examples expire after 30 days without review.'};
     await save('ok',{...output,model_response:modelPlan});
     return res.status(200).json(output);
   } catch {

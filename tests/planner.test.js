@@ -59,7 +59,40 @@ test('catalogue maps categories, excludes mismatches, future and stale entries',
   assert.deepEqual(examplesFor(p.buckets[2],0,date),[]);
   assert.deepEqual(examplesFor(p.buckets[2],2,new Date('2026-12-01')),[]);
   assert.deepEqual(examplesFor(p.buckets[2],2,new Date('2026-09-01')),[]);
-  assert.ok(CATALOGUE.every(f=>f.url.startsWith('https://www.hdfcfund.com/')));
+  const providers=new Set(['www.hdfcfund.com','www.sbimf.com','www.embassyofficeparks.com','www.mindspacereit.com']);
+  assert.ok(CATALOGUE.every(f=>providers.has(new URL(f.url).hostname)));
+});
+test('each existing fund category has alternatives from two providers',()=>{
+  const date=new Date('2026-10-05T12:00:00Z');
+  for(const [type,i] of [['liquid fund',0],['index fund',2],['large cap fund',2],['flexi cap fund',2]]) {
+    const examples=examplesFor({amount:1000,options:[type]},i,date);
+    assert.equal(examples.length,2);
+    assert.equal(new Set(examples.map(f=>new URL(f.url).hostname)).size,2);
+    assert.ok(examples.every(f=>!f.research_only));
+  }
+});
+test('gold and REIT research stays in nonzero high-risk long-term buckets',()=>{
+  const date=new Date('2026-10-05T12:00:00Z');
+  const bucket={amount:2000,options:['index fund','PPF']};
+  const high=examplesFor(bucket,2,date,undefined,'high');
+  assert.equal(high.length,6);
+  assert.equal(high.filter(f=>f.type==='gold ETF').length,2);
+  assert.equal(high.filter(f=>f.type==='REIT').length,2);
+  assert.ok(high.filter(f=>['gold ETF','REIT'].includes(f.type)).every(f=>f.research_only));
+  for(const risk of ['low','medium']) assert.ok(examplesFor(bucket,2,date,undefined,risk).every(f=>!['gold ETF','REIT'].includes(f.type)));
+  for(const i of [0,1]) assert.ok(examplesFor({amount:1000,options:['liquid fund','gold ETF','REIT']},i,date,undefined,'high').every(f=>f.type==='liquid fund'));
+  assert.deepEqual(examplesFor({...bucket,amount:0},2,date,undefined,'high'),[]);
+  assert.deepEqual(examplesFor(bucket,2,new Date('2026-12-01'),undefined,'high'),[]);
+});
+test('API stores and returns curated alternatives without changing model choices',async()=>{
+  const input={...typical,risk_comfort:'high'};
+  modelOutput=output(input);
+  const r=res();await handler(req(input),r);
+  assert.equal(r.code,200);
+  assert.deepEqual(r.body.buckets[2].options,['index fund','PPF']);
+  assert.equal(r.body.buckets[0].examples.length,2);
+  assert.equal(r.body.buckets[2].examples.length,6);
+  assert.equal(patches[0].output.buckets[2].examples.length,6);
 });
 test('API stores Gemini output and usage before returning success',async()=>{
   const r=res();await handler(req(),r);assert.equal(r.code,200);assert.equal(patches[0].status,'ok');assert.equal(patches[0].input_tokens,900);assert.equal(patches[0].output_tokens,260);
