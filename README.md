@@ -1,0 +1,55 @@
+# Payday Planner assignment feature
+
+This package extends the existing landing page with a Gemini payday-plan form.
+No keys are included. All three existing environment variable names are used.
+
+## Before deployment
+
+1. Run `setup-functions.sql` in the Supabase SQL Editor. The existing table is preserved.
+2. Upload index.html, planner.js, package.json, vercel.json, and the api/ and lib/ directories to the existing repository, preserving their paths.
+3. Deploy on Vercel with framework preset Other. No build command is required.
+4. Vercel should already contain GEMINI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY.
+
+## Tests after deployment
+
+- Typical: pay 50000, essentials 30000, save 10000, buffer none, purchase yes/cost 36000, risk medium. Expect 5000 / 3000 / 2000.
+- Edge: buffer three months or more; purchase no. Expect 0 / 0 / 10000.
+- Small saving: save 50; buffer under three months; purchase yes/cost 12000. Confirm no negative amount and sum exactly 50.
+- Zero saving: save 0. All three buckets zero, no product options or examples.
+- Unaffordable: pay 30000, essentials 28000, save 10000. The page blocks submission; the server refuses a direct invalid API request.
+- Generate five requests in one browser. The sixth must return HTTP 429 without calling Gemini. Refusals and service failures consume a try after the request is reserved.
+- Check the count and average against successful rows in Supabase. Errors and refusals are excluded from the displayed plan count.
+- Confirm five or more real rows. Record screenshots with no secrets visible.
+- Check an official source link in each visible named-fund example. Zero buckets have no examples. Low-risk/short-access inputs have no named equity examples.
+- For concurrency, fire six requests carrying the same signed visitor cookie; at most five may reserve rows. The database serializes reservations.
+
+## Implementation choices and limits
+
+- Gemini model: gemini-3.5-flash-lite. maxOutputTokens: 600, minimal thinking. The cap provides space for JSON keys plus concise explanations; 300 may truncate the required JSON. Measure actual usage after deployment.
+- The original tested prompt is included. A server arithmetic supplement specifies exact amounts, including clamping rounded values to available savings. Each explanation is requested at 15 words or fewer and validated at 25.
+- A signed HttpOnly cookie identifies a browser visitor. Five lifetime tries per cookie; 100 total requests per UTC day. Clearing cookies or changing browsers can reset the visitor identity. This is a course-demo cap, not account-level abuse prevention.
+- Requests are reserved atomically in Supabase before calling Gemini. There is no automatic model retry. A dropped process can leave a pending row, which still consumes a try and does not count as a completed plan.
+- Server input checks enforce whole rupees between 0 and 1 crore, positive take-home pay, valid dropdowns and affordability.
+- Invalid free-text values are recorded as `[invalid]`; extra fields are omitted from logs. These do not reach Gemini.
+- Server output checks enforce exact bucket names/amounts, allow-listed options, zero-bucket rules and bounded explanations. A phrase filter rejects common prohibited claims and names, but cannot prove all semantic claims safe. The verified fund catalogue never uses model names.
+- Fund catalogue: four HDFC Mutual Fund examples, official Direct Plan pages checked 5 October 2026. This is a limited sample, not a comparison or endorsement. Other providers are available. Entries expire after 30 days and require manual review. No prices, rankings, yields or returns are displayed in the tool.
+- Equity examples are shown only for medium/high risk and confirmation that long-term money can remain invested for seven years. This is a conservative prototype display rule, not a suitability assessment. The core split remains the assignment's simplified rule.
+- Submitted numbers are sent to Gemini and stored in Supabase. No names/emails are collected by the tool. The existing early-access signup remains an unconnected demo.
+- `output_tokens` includes reported candidate and thinking tokens. Rows with no model call use zero; missing provider usage is null. For model-call averages, use successful/model-response rows with reported usage, not local-validation refusals.
+- Raw model responses that fail checks are retained in error rows for review, never rendered in the browser. Errors returned to the browser do not include provider details or keys.
+- A successful answer is returned only after the database update succeeds. Aggregate statistics are computed by SQL across all successful rows and expose no individual financial inputs.
+- End-to-end Gemini/Supabase and latency checks require the live deployment; local tests use mocked service responses.
+
+## Worksheet evidence query
+
+Run this in SQL Editor after live testing (do not publish it as a browser endpoint):
+
+```sql
+select count(*) as measured_model_calls,
+       round(avg(input_tokens),1) as avg_input_tokens,
+       round(avg(output_tokens),1) as avg_output_tokens
+from public.payday_plans
+where input_tokens > 0 and output_tokens is not null;
+```
+
+Never put actual key values in this README, GitHub, screenshots or worksheet.

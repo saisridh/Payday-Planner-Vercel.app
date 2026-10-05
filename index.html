@@ -197,6 +197,24 @@
       html { scroll-behavior:auto; }
       *,*::before,*::after { transition:none !important; animation:none !important; }
     }
+
+    .planner-layout { display:grid; gap:28px; align-items:start; }
+    .planner-fields { display:grid; gap:0 18px; }
+    #planner-form { margin:0; }
+    #planner-form select { font:inherit; width:100%; padding:12px; border:1px solid #7e909e; border-radius:6px; background:white; color:var(--navy); }
+    #planner-form .check { display:flex; gap:10px; align-items:flex-start; font-weight:400; }
+    #planner-form .check input { width:18px; height:18px; margin-top:5px; flex-shrink:0; }
+    #planner-status { margin-top:18px; }
+    #planner-stats { margin-top:24px; padding:18px; border:1px solid var(--line); border-radius:8px; background:white; }
+    #plan-result { padding:28px; background:white; border:1px solid var(--line); border-radius:var(--radius); }
+    #plan-result > .small { margin-top:20px; }
+    .fund-examples { margin-top:14px; }
+    .fund-examples summary { padding:12px 30px 12px 0; font-size:.88rem; }
+    .fund-examples summary::after { top:6px; }
+    .fund-entry { padding:12px 0; }
+    .fund-entry p { padding:0; }
+    [hidden] { display:none !important; }
+    @media (min-width:760px) { .planner-layout { grid-template-columns:1fr 1fr; } .planner-fields { grid-template-columns:1fr 1fr; } }
   </style>
 </head>
 <body>
@@ -220,8 +238,8 @@
           <span class="eyebrow">Your first salary. Your own priorities.</span>
           <h1 id="hero-title">“I’ll save whatever’s left” gives every purchase a chance to <span>come first.</span></h1>
           <p>Make saving a payday decision. Payday Planner recommends how much to set aside and how to split it between emergencies, near-term goals and long-term investing, with a clear reason for each.</p>
-          <a class="button" href="#early-access">Join early access <span aria-hidden="true">↓</span></a>
-          <div class="small">Early-access preview</div>
+          <a class="button" href="#try-plan">Try a payday plan <span aria-hidden="true">↓</span></a>
+          <div class="small">Working course demo. No bank linking.</div>
         </div>
         <aside class="hero-comparison" aria-labelledby="hero-comparison-title">
           <h2 id="hero-comparison-title">Same ₹50,000 salary. Different order.</h2>
@@ -329,6 +347,33 @@
         </article>
       </div>
     </section>
+
+    <section class="section soft" id="try-plan" aria-labelledby="planner-title">
+      <div class="wrap">
+        <div class="intro"><span class="eyebrow">Try it on your own numbers</span><h2 id="planner-title">Your payday. Your plan.</h2><p>Choose an affordable saving amount. Get an illustrative split and a reason for each bucket. Five tries per browser.</p></div>
+        <div class="planner-layout">
+          <form id="planner-form" aria-describedby="planner-privacy">
+            <h3>Create a payday plan</h3>
+            <div class="planner-fields">
+              <div><label for="take-home-pay">Monthly take-home pay (₹)</label><input id="take-home-pay" type="number" min="1" max="10000000" step="1" required value="50000"></div>
+              <div><label for="essentials-emis">Monthly essentials and EMIs (₹)</label><input id="essentials-emis" type="number" min="0" max="10000000" step="1" required value="30000"></div>
+              <div><label for="amount-save">Save this payday (₹)</label><input id="amount-save" type="number" min="0" max="10000000" step="1" required value="10000"></div>
+              <div><label for="emergency-savings">Emergency savings so far</label><select id="emergency-savings"><option value="none">None yet</option><option value="under_3_months">Less than 3 months of expenses</option><option value="3_months_or_more">3 months or more</option></select></div>
+              <div><label for="purchase-planned">Purchase in the next 12 months?</label><select id="purchase-planned"><option value="yes">Yes</option><option value="no">No</option></select></div>
+              <div id="purchase-field"><label for="purchase-cost">Approximate purchase cost (₹)</label><input id="purchase-cost" type="number" min="1" max="10000000" step="1" required value="36000"></div>
+              <div><label for="risk-comfort">Comfort with ups and downs</label><select id="risk-comfort"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+            </div>
+            <label class="check" for="long-horizon"><input id="long-horizon" type="checkbox"><span>I can leave my long-term money invested for at least seven years. Show named equity examples when relevant.</span></label>
+            <p class="small" id="planner-privacy">Submitted numbers go to Gemini to generate the plan and are stored with the response in our database. Use sample figures if you prefer. No name, email or bank details needed.</p>
+            <label class="check" for="planner-consent"><input id="planner-consent" type="checkbox" required><span>I agree to send and store these figures for this course demo.</span></label>
+            <button class="button" id="generate-plan" type="submit">Create my payday plan</button>
+            <p id="planner-status" role="status" aria-live="polite" aria-atomic="true"></p>
+            <noscript><p>This tool needs JavaScript to generate a plan.</p></noscript>
+          </form>
+          <div><article id="plan-result" hidden aria-label="Your generated payday plan"></article><p id="planner-stats" role="status">Loading usage figures…</p><p class="small">The average describes submitted plans, not confirmed savings. Repeated tries can contribute more than one plan.</p></div>
+        </div>
+      </div>
+    </section>
     <!-- 7. Responsibility -->
     <section class="section dark" aria-labelledby="trust-title">
       <div class="wrap"><span class="eyebrow">You stay in control</span><h2 id="trust-title">Recommendations you can understand.<br>Decisions that stay yours.</h2>
@@ -383,7 +428,8 @@
     <!-- 11. Final call to action -->
     <section class="closing" aria-labelledby="closing-title"><div class="wrap"><span class="eyebrow">Make room for your priorities</span><h2 id="closing-title">Give saving a place on payday.</h2><p>Explore the planned early-access offer.</p><a class="button" href="#early-access">Join early access <span aria-hidden="true">↓</span></a></div></section>
   </main>
-  <footer><div class="wrap"><strong>Payday Planner</strong><p>Payday Planner is a concept prototype built for a course project. Example figures are illustrative and no returns are promised.</p></div></footer>
+  <footer><div class="wrap"><strong>Payday Planner</strong><p>Payday Planner is a course demo with a working AI planning feature. Early-access sign-ups are not connected. Figures are illustrative and no returns are promised.</p></div></footer>
+  <script src="/planner.js" defer></script>
   <script>
     /* Attach the guard before enabling submission. No data leaves this page. */
     const form = document.getElementById('access-form');
@@ -397,3 +443,4 @@
   </script>
 </body>
 </html>
+
