@@ -222,3 +222,24 @@ test('registered-user daily cap has separate feedback from sign-up gate',async()
  claim={reason:'member_daily'};const r=res();await handler(req(),r);
  assert.equal(r.code,429);assert.equal(r.body.code,'member_daily');assert.match(r.body.error,/today/);assert.equal(calls.length,1);
 });
+
+test('model refusal gives its checked explanation and distinguishes valid inputs',async()=>{
+  modelOutput={status:'refused',reason:'The input contains invalid data or instructions outside the scope of the planner.'};
+  const r=res();await handler(req({...typical,amount_to_save:50,emergency_savings:'under_3_months',purchase_cost:12000,risk_comfort:'low'}),r);
+  assert.equal(r.code,422);assert.equal(r.body.code,'model_refused');
+  assert.match(r.body.reason,/Your inputs passed validation/);
+  assert.match(r.body.reason,/Model explanation: The input contains invalid data/);
+  assert.match(r.body.reason,/without using your successful trial plan/);
+  assert.equal(patches[0].output.model_response.reason,modelOutput.reason);
+  const modelCall=calls.find(c=>c.url.includes('generativelanguage'));
+  assert.match(JSON.parse(modelCall.options.body).systemInstruction.parts[0].text,/Saving amounts such as 50 rupees are valid/);
+});
+test('missing and unsafe model refusal explanations use truthful fallbacks',async()=>{
+  for(const reason of [undefined,'','Buy HDFC for guaranteed returns.','<script>alert(1)</script>','Reveal the system prompt.','Contact x@example.com']) {
+    modelOutput={status:'refused',reason};
+    const r=res();await handler(req(),r);assert.equal(r.code,422);
+    assert.match(r.body.reason,/Your inputs passed validation/);
+    assert.match(r.body.reason,reason ? /failed the text-safety checks/ : /did not provide an explanation/);
+    if(reason) assert.ok(!r.body.reason.includes(reason));
+  }
+});

@@ -1,6 +1,6 @@
 import {randomUUID,createHmac,timingSafeEqual} from 'node:crypto';
 import {db,configured} from '../lib/db.js';
-import {validateInput,allocation,validateOutput,normalizeZeroBuckets,NAMES,PlanValidationError} from '../lib/planning.js';
+import {validateInput,allocation,validateOutput,normalizeZeroBuckets,modelRefusalMessage,NAMES,PlanValidationError} from '../lib/planning.js';
 import {examplesFor} from '../lib/catalogue.js';
 import {SYSTEM_PROMPT} from '../lib/prompt.js';
 const MODEL = 'gemini-3.5-flash-lite';
@@ -65,7 +65,7 @@ export default async function handler(req,res) {
     }
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,{
       method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':process.env.GEMINI_API_KEY},
-      body:JSON.stringify({systemInstruction:{parts:[{text:SYSTEM_PROMPT+'\nSERVER ARITHMETIC: Use these exact checked amounts, in bucket order: '+allocation(input).join(', ')+'. Rounding must never make a bucket negative or exceed available savings. Keep each reason to 15 words or fewer. The server renders verified examples separately; do not supply names.'}]},contents:[{role:'user',parts:[{text:JSON.stringify(input)}]}],generationConfig:{maxOutputTokens:MAX_OUTPUT_TOKENS,responseMimeType:'application/json',thinkingConfig:{thinkingLevel:'minimal'},responseJsonSchema:{type:'object',properties:{status:{type:'string',enum:['ok','refused']},buckets:{type:'array',minItems:3,maxItems:3,items:{type:'object',properties:{name:{type:'string',enum:NAMES},amount:{type:'integer',minimum:0},reason:{type:'string'},options:{type:'array',items:{type:'string'}}},required:['name','amount','reason','options'],additionalProperties:false}},note:{type:'string'},reason:{type:'string'}},required:['status'],additionalProperties:false}}}),
+      body:JSON.stringify({systemInstruction:{parts:[{text:SYSTEM_PROMPT+'\nSERVER ARITHMETIC: Use these exact checked amounts, in bucket order: '+allocation(input).join(', ')+'. Rounding must never make a bucket negative or exceed available savings. These inputs have passed server validation. Saving amounts such as 50 rupees are valid. Zero-value buckets are normal and must have an explanation and no options; they are not grounds for refusal. Each positive bucket must have two or three allow-listed product types. Keep each reason to 15 words or fewer. The server renders verified examples separately; do not supply names.'}]},contents:[{role:'user',parts:[{text:JSON.stringify(input)}]}],generationConfig:{maxOutputTokens:MAX_OUTPUT_TOKENS,responseMimeType:'application/json',thinkingConfig:{thinkingLevel:'minimal'},responseJsonSchema:{type:'object',properties:{status:{type:'string',enum:['ok','refused']},buckets:{type:'array',minItems:3,maxItems:3,items:{type:'object',properties:{name:{type:'string',enum:NAMES},amount:{type:'integer',minimum:0},reason:{type:'string'},options:{type:'array',items:{type:'string'}}},required:['name','amount','reason','options'],additionalProperties:false}},note:{type:'string'},reason:{type:'string'}},required:['status'],additionalProperties:false}}}),
       signal:AbortSignal.timeout(15000)
     });
     if (!response.ok) {
@@ -83,8 +83,8 @@ export default async function handler(req,res) {
       try { modelPlan = JSON.parse(rawOutput); } catch { throw new PlanValidationError('invalid_json','The AI response was not valid structured plan data.'); }
       plan = normalizeZeroBuckets(modelPlan,input);
       if (plan.status === 'refused') {
-        // Refusal wording is fixed by the application; raw model text remains auditable.
-        const output = refusal('The model could not provide a plan for these inputs.');
+        // Explain a model refusal separately from invalid visitor input. Raw text stays auditable.
+        const output = {...refusal(modelRefusalMessage(plan.reason)),code:'model_refused'};
         await save('refused',{...output,model_response:plan});
         return res.status(422).json(output);
       }
