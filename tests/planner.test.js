@@ -79,6 +79,13 @@ test('signed cookie carries same visitor and tampering creates a new identity',a
 });
 test('truncated model output is stored but never displayed',async()=>{finishReason='MAX_TOKENS';const r=res();await handler(req(),r);assert.equal(r.code,502);assert.equal(patches[0].status,'error');assert.ok(patches[0].output.model_response);assert.ok(!r.body.buckets);});
 test('bad model output fails closed',async()=>{modelOutput.buckets[2].amount=9000;const r=res();await handler(req(),r);assert.equal(r.code,502);assert.equal(patches[0].status,'error');});
+test('zero-buffer explanation distinguishes rounding from a complete buffer',async()=>{
+  const x={...typical,amount_to_save:50,emergency_savings:'under_3_months',purchase_cost:12000};
+  modelOutput=output(x);modelOutput.buckets[0].reason='Your buffer is already complete.';
+  const r=res();await handler(req(x),r);assert.equal(r.code,200);
+  assert.match(r.body.buckets[0].reason,/rounds to zero/);
+  assert.equal(patches[0].output.model_response.buckets[0].reason,'Your buffer is already complete.');
+});
 test('provider rate limit is logged with a useful message',async()=>{modelStatus=429;const r=res();await handler(req(),r);assert.equal(r.code,503);assert.equal(patches[0].status,'error');assert.match(r.body.error,/quota/);});
 test('model refusal is logged and safely returned',async()=>{modelOutput={status:'refused',reason:'Invalid.'};const r=res();await handler(req(),r);assert.equal(r.code,422);assert.equal(patches[0].status,'refused');});
 test('database failure prevents returning successful plan',async()=>{global.fetch=async()=>new Response(null,{status:500});const r=res();await handler(req(),r);assert.equal(r.code,503);assert.ok(!r.body.buckets);});

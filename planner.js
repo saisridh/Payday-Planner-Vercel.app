@@ -45,7 +45,7 @@ async function refreshStats() {
     const response = await fetch('/api/stats',{cache:'no-store',signal:AbortSignal.timeout(8000)});
     if (!response.ok) throw new Error();
     const s = await response.json();
-    text.textContent = s.sample_size === 0 ? '0 plans generated so far. The average will appear after the first completed plan.' : `${s.plans_generated} plans generated so far. On average, visitors set aside ${s.average_saving_share}% of take-home pay (across ${s.sample_size} plans).`;
+    text.textContent = s.sample_size === 0 ? '0 plans generated so far. The average will appear after the first completed plan.' : `${s.plans_generated} ${s.plans_generated === 1 ? 'plan' : 'plans'} generated so far. On average, visitors set aside ${s.average_saving_share}% of take-home pay (across ${s.sample_size} ${s.sample_size === 1 ? 'plan' : 'plans'}).`;
   } catch { text.textContent = 'Usage figures are temporarily unavailable.'; }
 }
 document.getElementById('purchase-planned').addEventListener('change',function() {
@@ -77,6 +77,8 @@ plannerForm.addEventListener('submit',async event => {
     return;
   }
   const button = document.getElementById('generate-plan');
+  const fields = Array.from(plannerForm.querySelectorAll('input,select'));
+  fields.forEach(field=>{field.disabled=true;});
   button.disabled = true; button.textContent = 'Creating your plan…';
   plannerStatus.textContent = 'Checking your numbers and preparing your plan.';
   latestPlan = null; planResult.hidden = true;
@@ -89,6 +91,6 @@ plannerForm.addEventListener('submit',async event => {
     await refreshStats();
   } catch (error) {
     plannerStatus.textContent = error.name === 'TimeoutError' ? 'The request took too long. It may still complete and use a try. Please wait before retrying.' : error.message;
-  } finally { button.disabled = false; button.textContent = 'Create my payday plan'; }
+  } finally { fields.forEach(field=>{field.disabled=false;}); button.disabled = false; button.textContent = 'Create my payday plan'; }
 });
 refreshStats();

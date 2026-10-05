@@ -1,6 +1,6 @@
 import {randomUUID,createHmac,timingSafeEqual} from 'node:crypto';
 import {db,configured} from '../lib/db.js';
-import {validateInput,allocation,validateOutput,NAMES} from '../lib/planning.js';
+import {validateInput,allocation,validateOutput,zeroReason,NAMES} from '../lib/planning.js';
 import {examplesFor} from '../lib/catalogue.js';
 import {SYSTEM_PROMPT} from '../lib/prompt.js';
 const MODEL = 'gemini-3.5-flash-lite';
@@ -85,8 +85,8 @@ export default async function handler(req,res) {
       await save('error',{status:'error',reason:'Model response failed format or safety checks.',model_response:rawOutput});
       return res.status(502).json({error:'The response did not pass our checks. Please try again.'});
     }
-    const output = {...plan,buckets:plan.buckets.map((b,i)=>({...b,examples:examplesFor(b,i)})),catalogue_note:'Illustrative examples from a small HDFC Mutual Fund catalogue, not a ranking or endorsement. Other providers are available. Names checked on 5 October 2026; examples expire after 30 days without review.'};
-    await save('ok',output);
+    const output = {...plan,buckets:plan.buckets.map((b,i)=>({...b,reason:b.amount === 0 ? zeroReason(input,i) : b.reason,examples:examplesFor(b,i)})),catalogue_note:'Illustrative examples from a small HDFC Mutual Fund catalogue, not a ranking or endorsement. Other providers are available. Names checked on 5 October 2026; examples expire after 30 days without review.'};
+    await save('ok',{...output,model_response:plan});
     return res.status(200).json(output);
   } catch {
     if (id) { try { await db(`payday_plans?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status:'error',output:{status:'error',reason:'Request interrupted or service unavailable.'},...tokens})}); } catch {} }
