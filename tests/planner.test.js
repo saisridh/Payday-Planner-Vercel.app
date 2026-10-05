@@ -86,6 +86,28 @@ test('zero-buffer explanation distinguishes rounding from a complete buffer',asy
   assert.match(r.body.buckets[0].reason,/rounds to zero/);
   assert.equal(patches[0].output.model_response.buckets[0].reason,'Your buffer is already complete.');
 });
+test('actual rejected fifty-rupee response is safely corrected before validation',async()=>{
+  const x={...typical,amount_to_save:50,emergency_savings:'under_3_months',purchase_cost:12000};
+  modelOutput={status:'ok',buckets:[
+    {name:'Emergency buffer',amount:0,reason:'Since your savings are under three months, you can strengthen your safety net.',options:['savings account','fixed deposit','liquid fund']},
+    {name:'Near-term goal',amount:50,reason:'This helps fund your upcoming purchase planned soon.',options:['recurring deposit','fixed deposit','liquid fund']},
+    {name:'Long-term investing',amount:0,reason:'With a medium risk comfort, you can build wealth over time.',options:['PPF','flexi cap fund']}
+  ],note:NOTE};
+  const r=res();await handler(req(x),r);assert.equal(r.code,200);
+  assert.deepEqual(r.body.buckets.map(b=>b.amount),[0,50,0]);
+  assert.deepEqual(r.body.buckets[0].options,[]);assert.deepEqual(r.body.buckets[2].options,[]);
+  assert.deepEqual(r.body.buckets[0].examples,[]);assert.deepEqual(r.body.buckets[2].examples,[]);
+  assert.match(r.body.buckets[0].reason,/rounds to zero/);
+  assert.equal(patches[0].output.model_response.buckets[0].options.length,3);
+  assert.ok(!r.body.model_response);
+});
+test('zero-bucket correction still rejects incorrect amounts and unsafe funded options',async()=>{
+  const x={...typical,amount_to_save:50,emergency_savings:'under_3_months',purchase_cost:12000};
+  modelOutput=output(x);modelOutput.buckets[0].amount=100;
+  const r=res();await handler(req(x),r);assert.equal(r.code,502);
+  modelOutput=output(x);modelOutput.buckets[1].options.push('Invented Fund');
+  const r2=res();await handler(req(x),r2);assert.equal(r2.code,502);
+});
 test('provider rate limit is logged with a useful message',async()=>{modelStatus=429;const r=res();await handler(req(),r);assert.equal(r.code,503);assert.equal(patches[0].status,'error');assert.match(r.body.error,/quota/);});
 test('model refusal is logged and safely returned',async()=>{modelOutput={status:'refused',reason:'Invalid.'};const r=res();await handler(req(),r);assert.equal(r.code,422);assert.equal(patches[0].status,'refused');});
 test('database failure prevents returning successful plan',async()=>{global.fetch=async()=>new Response(null,{status:500});const r=res();await handler(req(),r);assert.equal(r.code,503);assert.ok(!r.body.buckets);});
