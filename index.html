@@ -328,7 +328,7 @@
     <section class="section mint" aria-labelledby="habit-title">
       <div class="wrap"><span class="eyebrow">A habit to start with</span><h2 id="habit-title">Plan for life. Then save first.</h2>
         <ol class="steps">
-          <li><h3>Allow for essentials and EMIs</h3><p>Make room for the expenses and repayments you need to cover.</p></li>
+          <li><h3>Allow for essentials and EMIs</h3><p>Make room for the expenses and repayments you need to cover. Essentials are what you must pay to live and work. Everything else comes from what is left after you save.</p></li>
           <li><h3>Choose an affordable amount</h3><p>Decide what you can comfortably set aside this payday.</p></li>
           <li><h3>Save first</h3><p>Carry out your savings plan through your own bank or investment platform.</p></li>
           <li><h3>Spend what’s left</h3><p>Let the remaining amount guide your spending.</p></li>
@@ -372,18 +372,21 @@
             <h3>Create a payday plan</h3><p class="small">The figures below are a sample. Change them to explore your own situation.</p>
             <div class="planner-fields">
               <div><label for="take-home-pay">Monthly take-home pay (₹)</label><input id="take-home-pay" type="number" min="1" max="10000000" step="1" required value="50000"></div>
-              <div><label for="essentials-emis">Monthly essentials and EMIs (₹)</label><input id="essentials-emis" type="number" min="0" max="10000000" step="1" required value="30000"></div>
-              <div><label for="amount-save">Save this payday (₹)</label><input id="amount-save" type="number" min="0" max="10000000" step="1" required value="10000"></div>
+              <div><label for="essentials-emis">Monthly essentials and EMIs (₹)</label><input id="essentials-emis" type="number" min="0" max="10000000" step="1" required value="30000" aria-describedby="essentials-help essentials-check"><p class="small" id="essentials-help">Essentials are what you must pay to live and work: rent, groceries, bills, commuting, insurance and EMIs. Eating out, subscriptions, shopping and upgrades are not essentials; they come from what is left.</p><p class="small" id="essentials-check" aria-live="polite" hidden></p></div>
+              <div><label for="amount-save">Save this payday (₹)</label><input id="amount-save" type="number" min="0" max="10000000" step="1" required value="10000" aria-describedby="saving-share low-saving-nudge"><p class="small" id="saving-share" aria-live="polite"></p><p class="small" id="low-saving-nudge" aria-live="polite" hidden></p></div>
               <div><label for="emergency-savings">Emergency savings so far</label><select id="emergency-savings"><option value="none">None yet</option><option value="under_3_months">Less than 3 months of expenses</option><option value="3_months_or_more">3 months or more</option></select></div>
               <div><label for="purchase-planned">Purchase in the next 12 months?</label><select id="purchase-planned"><option value="yes">Yes</option><option value="no">No</option></select></div>
               <div id="purchase-field"><label for="purchase-cost">Approximate purchase cost (₹)</label><input id="purchase-cost" type="number" min="1" max="10000000" step="1" required value="36000"></div>
               <div><label for="risk-comfort">Comfort with ups and downs</label><select id="risk-comfort"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
             </div>
             <p id="budget-preview" class="budget-preview" aria-live="polite"></p>
+            <p id="budget-validation" class="budget-preview" aria-live="polite" data-invalid="true" hidden></p>
+            <p class="small" id="tight-budget-nudge" aria-live="polite" hidden></p>
             <label class="check" for="long-horizon"><input id="long-horizon" type="checkbox"><span>I can leave my long-term money invested for at least seven years. Show named equity examples when relevant.</span></label>
             <p class="small" id="planner-privacy">Your figures are sent to Google Gemini and stored with your generated plan. You can use sample figures. No name, email or bank details are required.</p>
             <label class="check" for="planner-consent"><input id="planner-consent" type="checkbox" required><span>I agree to send and store these figures to generate my plan.</span></label>
             <button class="button" id="generate-plan" type="submit">Create my payday plan</button>
+            <p class="small">Payday Planner relies on the numbers you enter. It cannot check them.</p>
             <p id="planner-status" role="status" aria-live="polite" aria-atomic="true"></p>
             <noscript><p>This tool needs JavaScript to generate a plan.</p></noscript>
           </form>
@@ -450,6 +453,70 @@
   </main>
   <footer><div class="wrap"><strong>Payday Planner</strong><p>Illustrative savings plans for your first paydays. You make the decisions and carry them out. No returns are promised.</p></div></footer>
   <script src="/planner.js" defer></script>
+  <script>
+    // Page-only helpers. Planning requests, validation and access rules stay in planner.js.
+    (() => {
+      const stats = document.getElementById('planner-stats');
+      function updateAverageCopy() {
+        const current = stats.textContent;
+        if (!current.includes('On average, visitors set aside ') || current.endsWith('The tool suggests 20% by default.')) return;
+        stats.textContent = current.replace(/\(across (\d+) plans?\)/, '(across $1 plans)') + ' The tool suggests 20% by default.';
+      }
+      new MutationObserver(updateAverageCopy).observe(stats, { childList: true, characterData: true, subtree: true });
+      updateAverageCopy();
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('planner-form');
+        const payField = document.getElementById('take-home-pay');
+        const expensesField = document.getElementById('essentials-emis');
+        const savingField = document.getElementById('amount-save');
+        const preview = document.getElementById('budget-preview');
+        const validation = document.getElementById('budget-validation');
+        const originalPreview = updateBudgetPreview;
+        const percent = value => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 1 }).format(value);
+        const rupees = value => '₹' + new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value);
+        let savingEdited = false;
+
+        function showMessage(id, message) {
+          const element = document.getElementById(id);
+          element.textContent = message;
+          element.hidden = !message;
+        }
+
+        updateBudgetPreview = function () {
+          originalPreview();
+          const pay = payField.valueAsNumber;
+          const expenses = expensesField.valueAsNumber;
+          const saving = savingField.valueAsNumber;
+          const hasPay = Number.isFinite(pay) && pay > 0;
+          const hasSaving = hasPay && Number.isFinite(saving) && saving >= 0;
+          const hasExpenses = hasPay && Number.isFinite(expenses) && expenses >= 0;
+          const left = pay - expenses - saving;
+          const valid = hasSaving && hasExpenses && left >= 0;
+          validation.textContent = valid ? '' : 'Your essentials, EMIs and savings must fit within your take-home pay.';
+          validation.hidden = valid;
+          preview.textContent = valid ? 'After essentials, EMIs and saving, you would have ' + rupees(left) + ' left to spend this month, about ' + rupees(Math.round(left / 30 / 10) * 10) + ' a day.' : '';
+          preview.hidden = !valid;
+          preview.dataset.invalid = 'false';
+          showMessage('saving-share', hasSaving ? 'That is ' + percent(saving / pay * 100) + '% of your take-home pay.' : '');
+          showMessage('essentials-check', hasExpenses && expenses / pay > 0.6 ? 'Essentials and EMIs are ' + percent(expenses / pay * 100) + '% of your take-home pay. Check that everything counted here is truly essential.' : '');
+          showMessage('low-saving-nudge', hasSaving && saving / pay < 0.1 ? 'You are setting aside ' + percent(saving / pay * 100) + '% of your take-home pay. A common rule of thumb is about 20%. You can still see your plan.' : '');
+          showMessage('tight-budget-nudge', valid && left / pay < 0.1 ? 'That leaves little for everything else. Check that it feels realistic.' : '');
+        };
+
+        function handleBudgetEdit(event) {
+          if (event.target === savingField) savingEdited = true;
+          if (event.target === payField && !savingEdited && Number.isFinite(payField.valueAsNumber) && payField.valueAsNumber > 0) {
+            savingField.value = Math.round(payField.valueAsNumber * 0.2 / 500) * 500;
+          }
+          if ([payField, expensesField, savingField].includes(event.target)) updateBudgetPreview();
+        }
+        // Capture edits before the existing planner input handler reads the numbers.
+        form.addEventListener('input', handleBudgetEdit, true);
+        form.addEventListener('change', handleBudgetEdit, true);
+        updateBudgetPreview();
+      });
+    })();
+  </script>
 </body>
 </html>
-
