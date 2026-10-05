@@ -3,6 +3,8 @@ const plannerStatus = document.getElementById('planner-status');
 const planResult = document.getElementById('plan-result');
 const money = n => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(n);
 let latestPlan;
+let latestInput;
+const placeholder = document.getElementById("plan-placeholder");
 function node(tag,text,className) {
   const e = document.createElement(tag);
   if (text != null) e.textContent = text;
@@ -12,6 +14,7 @@ function node(tag,text,className) {
 function renderPlan(plan) {
   planResult.replaceChildren();
   planResult.append(node('h3','Your illustrative payday plan'));
+  if (latestInput) planResult.append(node('p',money(latestInput.amount_to_save)+' to save from '+money(latestInput.take_home_pay)+' monthly take-home pay.','small'));
   for (const [i,b] of plan.buckets.entries()) {
     const card = node('article',null,'allocation');
     const heading = node('div',null,'allocation-title');
@@ -33,10 +36,11 @@ function renderPlan(plan) {
         details.append(entry);
       }
       card.append(details);
-    } else if (b.amount > 0 && i === 2) card.append(node('p','Named equity examples appear only with medium/high risk comfort and the seven-year access confirmation. Other categories may have no catalogue example.','small'));
+    } else if (b.amount > 0 && i === 2) card.append(node('p','To view equity fund examples, choose medium or high risk and confirm you can leave this money invested for seven years.','small'));
     planResult.append(card);
   }
   planResult.append(node('p',plan.note,'small'),node('p',plan.catalogue_note,'small'));
+  placeholder.hidden = true;
   planResult.hidden = false;
 }
 async function refreshStats() {
@@ -48,6 +52,16 @@ async function refreshStats() {
     text.textContent = s.sample_size === 0 ? '0 plans generated so far. The average will appear after the first completed plan.' : `${s.plans_generated} ${s.plans_generated === 1 ? 'plan' : 'plans'} generated so far. On average, visitors set aside ${s.average_saving_share}% of take-home pay (across ${s.sample_size} ${s.sample_size === 1 ? 'plan' : 'plans'}).`;
   } catch { text.textContent = 'Usage figures are temporarily unavailable.'; }
 }
+function updateBudgetPreview() {
+  const pay = Number(document.getElementById('take-home-pay').value);
+  const expenses = Number(document.getElementById('essentials-emis').value);
+  const saving = Number(document.getElementById('amount-save').value);
+  const preview = document.getElementById('budget-preview');
+  const valid = [pay,expenses,saving].every(Number.isFinite) && pay > 0 && expenses >= 0 && saving >= 0 && expenses + saving <= pay;
+  preview.dataset.invalid = String(!valid);
+  preview.textContent = valid ? money(pay-expenses-saving)+' remains for other spending after essentials, EMIs and your chosen savings.' : 'Your essentials, EMIs and savings must fit within your take-home pay.';
+}
+updateBudgetPreview();
 document.getElementById('purchase-planned').addEventListener('change',function() {
   const yes = this.value === 'yes';
   document.getElementById('purchase-field').hidden = !yes;
@@ -57,7 +71,10 @@ document.getElementById('long-horizon').addEventListener('change',()=>{if(latest
 plannerForm.addEventListener('input',event=>{
   if (['long-horizon','planner-consent'].includes(event.target.id)) return;
   latestPlan = null;
+  latestInput = null;
   planResult.hidden = true;
+  placeholder.hidden = false;
+  updateBudgetPreview();
   plannerStatus.textContent = '';
 });
 plannerForm.addEventListener('submit',async event => {
@@ -81,16 +98,17 @@ plannerForm.addEventListener('submit',async event => {
   fields.forEach(field=>{field.disabled=true;});
   button.disabled = true; button.textContent = 'Creating your plan…';
   plannerStatus.textContent = 'Checking your numbers and preparing your plan.';
-  latestPlan = null; planResult.hidden = true;
+  latestPlan = null; latestInput = null; planResult.hidden = true;
+  planResult.setAttribute('aria-busy','true');
   try {
     const response = await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input),signal:AbortSignal.timeout(28000)});
     const data = await response.json();
     if (!response.ok || data.status !== 'ok') throw new Error(data.reason || data.error || 'The plan could not be generated.');
-    latestPlan = data; renderPlan(data);
+    latestPlan = data; latestInput = input; renderPlan(data);
     plannerStatus.textContent = 'Your plan is ready. The three amounts add up to '+money(input.amount_to_save)+'.';
     await refreshStats();
   } catch (error) {
-    plannerStatus.textContent = error.name === 'TimeoutError' ? 'The request took too long. It may still complete and use a try. Please wait before retrying.' : error.message;
-  } finally { fields.forEach(field=>{field.disabled=false;}); button.disabled = false; button.textContent = 'Create my payday plan'; }
+    plannerStatus.textContent = error.name === 'TimeoutError' ? 'The request took too long. It may still complete and use a try. Please wait before retrying.' : error instanceof TypeError ? 'We could not connect. Check your connection and try again when ready.' : error.message;
+  } finally { planResult.setAttribute('aria-busy','false'); fields.forEach(field=>{field.disabled=false;}); button.disabled = false; button.textContent = 'Create my payday plan'; }
 });
 refreshStats();
