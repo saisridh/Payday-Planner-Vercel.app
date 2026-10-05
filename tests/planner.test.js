@@ -15,14 +15,15 @@ function req(body=typical,cookie) {
 function res() {
   return {headers:{},code:200,setHeader(k,v){this.headers[k]=v;},status(n){this.code=n;return this;},json(x){this.body=x;return this;}};
 }
-let calls, patches, modelOutput, modelStatus, claim, finishReason;
+let calls, patches, modelOutput, modelStatus, claim, finishReason, previousPlans;
 beforeEach(()=>{
   process.env.SUPABASE_URL='https://database.example';
   process.env.SUPABASE_SERVICE_KEY='test-server-key';
   process.env.GEMINI_API_KEY='test-model-key';
-  calls=[];patches=[];modelOutput=output();modelStatus=200;claim={id:'00000000-0000-4000-8000-000000000000'};finishReason='STOP';
+  calls=[];patches=[];modelOutput=output();modelStatus=200;claim={id:'00000000-0000-4000-8000-000000000000'};finishReason='STOP';previousPlans=[];
   global.fetch = async (url,options) => {
     calls.push({url,options});
+    if (url.includes('/rest/v1/payday_plans?') && options.method !== 'PATCH') return Response.json(previousPlans);
     if (url.includes('/rpc/claim_payday_request')) return Response.json(claim);
     if (url.includes('/rpc/payday_stats')) return Response.json({plans_generated:2,sample_size:2,average_saving_share:25});
     if (options.method === 'PATCH') { patches.push(JSON.parse(options.body));return new Response(null,{status:204}); }
@@ -67,15 +68,15 @@ test('invalid direct API input is logged with zero model tokens and no Gemini ca
 });
 test('injected free text and extra personal fields are not stored',async()=>{
   const r=res();await handler(req({...typical,purchase_cost:'Personal or injected text',email:'example@example.com'}),r);
-  const stored=JSON.parse(calls[0].options.body).p_input;
+  const stored=JSON.parse(calls.find(c=>c.url.includes('/rpc/claim_payday_request')).options.body).p_input;
   assert.equal(stored.purchase_cost,'[invalid]');assert.ok(!stored.email);assert.ok(!JSON.stringify(stored).includes('Personal'));
 });
-test('capped request never calls model or updates table',async()=>{claim={reason:'visitor'};const r=res();await handler(req(),r);assert.equal(r.code,429);assert.equal(patches.length,0);assert.equal(calls.length,1);});
-test('daily quota cap never calls model',async()=>{claim={reason:'daily'};const r=res();await handler(req(),r);assert.equal(r.code,429);assert.match(r.body.error,/daily/);assert.equal(calls.length,1);});
+test('capped request never calls model or updates table',async()=>{claim={reason:'visitor'};const r=res();await handler(req(),r);assert.equal(r.code,429);assert.equal(patches.length,0);assert.equal(calls.length,2);});
+test('daily quota cap never calls model',async()=>{claim={reason:'daily'};const r=res();await handler(req(),r);assert.equal(r.code,429);assert.match(r.body.error,/daily/);assert.equal(calls.length,2);});
 test('signed cookie carries same visitor and tampering creates a new identity',async()=>{
-  const r1=res();await handler(req(),r1);const cookie=r1.headers['Set-Cookie'].split(';')[0];const id1=JSON.parse(calls[0].options.body).p_visitor;
-  calls=[];await handler(req(typical,cookie),res());assert.equal(JSON.parse(calls[0].options.body).p_visitor,id1);
-  calls=[];await handler(req(typical,cookie.replace(/.$/,'z')),res());assert.notEqual(JSON.parse(calls[0].options.body).p_visitor,id1);
+  const r1=res();await handler(req(),r1);const cookie=r1.headers['Set-Cookie'].split(';')[0];const id1=JSON.parse(calls.find(c=>c.url.includes('/rpc/claim_payday_request')).options.body).p_visitor;
+  calls=[];await handler(req(typical,cookie),res());assert.equal(JSON.parse(calls.find(c=>c.url.includes('/rpc/claim_payday_request')).options.body).p_visitor,id1);
+  calls=[];await handler(req(typical,cookie.replace(/.$/,'z')),res());assert.notEqual(JSON.parse(calls.find(c=>c.url.includes('/rpc/claim_payday_request')).options.body).p_visitor,id1);
 });
 test('truncated model output is stored but never displayed',async()=>{finishReason='MAX_TOKENS';const r=res();await handler(req(),r);assert.equal(r.code,502);assert.equal(patches[0].status,'error');assert.ok(patches[0].output.model_response);assert.ok(!r.body.buckets);});
 test('bad model output fails closed',async()=>{modelOutput.buckets[2].amount=9000;const r=res();await handler(req(),r);assert.equal(r.code,502);assert.equal(patches[0].status,'error');});
@@ -114,3 +115,33 @@ test('database failure prevents returning successful plan',async()=>{global.fetc
 test('missing environment config gives clear service failure',async()=>{delete process.env.GEMINI_API_KEY;const r=res();await handler(req(),r);assert.equal(r.code,503);assert.equal(calls.length,0);});
 test('cross-origin and wrong methods are blocked',async()=>{const r=res();const request=req();request.headers.origin='https://other.example';await handler(request,r);assert.equal(r.code,403);const g=res();await handler({...req(),method:'GET'},g);assert.equal(g.code,405);});
 test('stats endpoint returns only aggregate database result',async()=>{const r=res();await statsHandler({method:'GET'},r);assert.deepEqual(r.body,{plans_generated:2,sample_size:2,average_saving_share:25});assert.ok(!JSON.stringify(r.body).includes('visitor'));});
+
+test('one successful trial blocks more Gemini calls and returns signup action',async()=>{
+ previousPlans=[{id:'prior',status:'ok'}];const r=res();await handler(req(),r);
+ assert.equal(r.code,403);assert.equal(r.body.code,'signup_required');
+ assert.equal(calls.length,1);assert.equal(patches.length,0);
+});
+test('atomic database trial gate returns signup and prevents model use',async()=>{
+ claim={reason:'signup'};const r=res();await handler(req(),r);
+ assert.equal(r.code,403);assert.equal(r.body.code,'signup_required');
+ assert.ok(!calls.some(c=>c.url.includes('generativelanguage')));
+});
+test('pending request receives a wait message without a model call',async()=>{
+ claim={reason:'pending'};const r=res();await handler(req(),r);
+ assert.equal(r.code,429);assert.match(r.body.error,/already being generated/);
+ assert.ok(!calls.some(c=>c.url.includes('generativelanguage')));
+});
+test('validation failure gives specific safe reason and stores error code',async()=>{
+ modelOutput.buckets[2].amount=9000;const r=res();await handler(req(),r);
+ assert.equal(r.body.code,'incorrect_amount');assert.match(r.body.error,/Long-term investing.*amount did not match/);
+ assert.equal(patches[0].output.code,'incorrect_amount');assert.ok(!r.body.model_response);
+});
+test('unsafe explanations report the failing check without reproducing model claims',async()=>{
+ modelOutput.buckets[0].reason='Guaranteed 15% returns.';const r=res();await handler(req(),r);
+ assert.equal(r.body.code,'unsafe_reason');assert.match(r.body.error,/prohibited claim/);
+ assert.ok(!r.body.error.includes('15%'));
+});
+test('truncation tells the visitor why the plan could not be shown',async()=>{
+ finishReason='MAX_TOKENS';const r=res();await handler(req(),r);
+ assert.equal(r.body.code,'incomplete_response');assert.match(r.body.error,/cut off/);
+});

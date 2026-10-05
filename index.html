@@ -213,6 +213,9 @@
     .fund-examples summary::after { top:6px; }
     .fund-entry { padding:12px 0; }
     .fund-entry p { padding:0; }
+    .signup-nudge { margin-top:20px; padding:24px; border:2px solid var(--accent); border-radius:var(--radius); background:white; }
+    .signup-nudge p { margin-top:12px; }
+    .signup-nudge .button { margin-top:18px; }
     .plan-placeholder { padding:28px; border:1px dashed #a4adc9; border-radius:var(--radius); background:#ffffff80; }
     .plan-placeholder p { margin-top:16px; color:var(--muted); }
     .plan-placeholder ul { padding-left:20px; color:var(--muted); }
@@ -238,7 +241,7 @@
         Payday Planner
       </a>
       <nav aria-label="Main navigation"><a href="#why-it-matters">Why it matters</a><a href="#how-it-works">How it works</a><a href="#sample-plan">Sample plan</a><a href="#faq">FAQs</a></nav>
-      <a class="button" href="#try-plan">Try a plan</a>
+      <a class="button" href="#early-access">Sign up</a>
     </div>
   </header>
   <main id="main">
@@ -250,7 +253,7 @@
           <h1 id="hero-title">“I’ll save whatever’s left” gives every purchase a chance to <span>come first.</span></h1>
           <p>Make saving a payday decision. Choose what you can afford to save. Payday Planner shows an illustrative split between emergencies, near-term goals and long-term investing, with a clear reason for each.</p>
           <a class="button" href="#try-plan">Try a payday plan <span aria-hidden="true">↓</span></a>
-          <div class="small">Free to try. No sign-up or bank linking.</div>
+          <div class="small">Try one plan without signing up. No bank linking.</div>
         </div>
         <aside class="hero-comparison" aria-labelledby="hero-comparison-title">
           <h2 id="hero-comparison-title">Same ₹50,000 salary. Different order.</h2>
@@ -336,7 +339,7 @@
         <div class="cards">
           <article class="card"><span class="number">01 / YOUR INPUTS</span><h3>Start with your situation</h3><p>Enter your pay, essentials and EMIs, chosen saving amount, emergency buffer and purchase goal. Choose your comfort with risk.</p></article>
           <article class="card"><span class="number">02 / YOUR PLAN</span><h3>See what goes where</h3><p>See how your chosen saving amount could be divided between emergencies, near-term goals and long-term investing, with a plain-language reason for each split.</p></article>
-          <article class="card"><span class="number">03 / YOUR NEXT PAYDAY</span><h3>Adjust as life changes</h3><p>A salary increase or a new expense? Change your inputs and create a fresh plan. Each new plan uses one of your five tries.</p></article>
+          <article class="card"><span class="number">03 / YOUR NEXT PAYDAY</span><h3>Adjust as life changes</h3><p>A salary increase or a new expense? Change your inputs and create a fresh plan. After your free trial plan, sign up to continue planning.</p></article>
         </div>
       </div>
     </section>
@@ -361,7 +364,7 @@
 
     <section class="section soft" id="try-plan" aria-labelledby="planner-title">
       <div class="wrap">
-        <div class="intro"><span class="eyebrow">Try it on your own numbers</span><h2 id="planner-title">Your payday. Your plan.</h2><p>Choose an affordable saving amount. Get an illustrative split and a reason for each bucket. Five tries per browser.</p></div>
+        <div class="intro"><span class="eyebrow">Try it on your own numbers</span><h2 id="planner-title">Your payday. Your plan.</h2><p>Choose an affordable saving amount. Get an illustrative split and a reason for each bucket. One free trial plan. Sign up to continue.</p></div>
         <div class="planner-layout">
           <form id="planner-form" aria-describedby="planner-privacy">
             <h3>Create a payday plan</h3><p class="small">The figures below are a sample. Change them to explore your own situation.</p>
@@ -382,7 +385,7 @@
             <p id="planner-status" role="status" aria-live="polite" aria-atomic="true"></p>
             <noscript><p>This tool needs JavaScript to generate a plan.</p></noscript>
           </form>
-          <div><article id="plan-placeholder" class="plan-placeholder"><span class="eyebrow">Your plan will appear here</span><h3>Give each rupee a purpose.</h3><p>Start with the sample figures or enter your own. Your plan will show three amounts, the reason for each split and product types to research.</p><ul><li>Emergency buffer</li><li>Near-term goal</li><li>Long-term investing</li></ul><p class="small">Illustrative guidance only. You choose what to do next.</p></article><article id="plan-result" hidden tabindex="-1" aria-label="Your generated payday plan"></article><p id="planner-stats" role="status">Loading usage figures…</p><p class="small">The average describes submitted plans, not confirmed savings. Repeated tries can contribute more than one plan.</p></div>
+          <div><article id="plan-placeholder" class="plan-placeholder"><span class="eyebrow">Your plan will appear here</span><h3>Give each rupee a purpose.</h3><p>Start with the sample figures or enter your own. Your plan will show three amounts, the reason for each split and product types to research.</p><ul><li>Emergency buffer</li><li>Near-term goal</li><li>Long-term investing</li></ul><p class="small">Illustrative guidance only. You choose what to do next.</p></article><article id="plan-result" hidden tabindex="-1" aria-label="Your generated payday plan"></article><aside id="signup-nudge" class="signup-nudge" hidden><h3>Make this your payday habit.</h3><p>You’ve used your free trial plan. Sign up and complete secure payment setup to continue: free for the first year, then ₹999 a year.</p><a class="button" href="#early-access">Sign up for my free year</a><p class="small">Secure registration and payment activation are being set up.</p></aside><p id="planner-stats" role="status">Loading usage figures…</p><p class="small">The average describes submitted plans, not confirmed savings. Repeated tries can contribute more than one plan.</p></div>
         </div>
       </div>
     </section>
@@ -400,7 +403,15 @@
     <section class="section mint" id="early-access" aria-labelledby="access-title">
       <div class="wrap access">
         <div><span class="eyebrow">Planned early-access offer</span><h2 id="access-title">Start with a plan<br>you understand.</h2><p class="offer"><strong>Free</strong> for the first year.<br>Then ₹999 a year.</p><p class="terms">Under the planned offer, the subscription renews automatically at ₹999 a year after the free first year. You’ll receive multiple reminders before any payment is charged, and you can cancel anytime.</p></div>
-        <article class="card"><span class="number">AVAILABLE TODAY</span><h3>Try the free planner.</h3><p>Create an illustrative plan now. You do not need an account or payment details.</p><p>The subscription offer is planned for a future launch. Registration and payments are not open yet.</p><a class="button" href="#try-plan">Create my payday plan <span aria-hidden="true">↑</span></a></article> </div>
+        <form id="access-form" aria-labelledby="form-title" aria-describedby="signup-availability">
+          <h3 id="form-title">Sign up for your free year</h3>
+          <p class="small">Name and email first. Secure payment setup comes next. Your free year starts once registration and payment setup are complete.</p>
+          <label for="signup-name">Name</label><input id="signup-name" type="text" required maxlength="100" autocomplete="name" placeholder="Your name">
+          <label for="signup-email">Email address</label><input id="signup-email" type="email" required maxlength="254" autocomplete="email" placeholder="you@example.com">
+          <p class="small" id="signup-availability">Registration is not active yet while secure checkout is being connected. These fields are a preview; details entered here are not sent or saved. No payment details are collected on this page.</p>
+          <button class="button" type="submit">Continue to payment setup</button>
+          <p id="form-status" role="status" aria-live="polite"></p>
+        </form> </div>
     </section>
     <!-- 9. Personal founder experience -->
     <section class="section" aria-labelledby="founder-title">
@@ -422,18 +433,18 @@
         <details><summary>Does it connect to my bank?</summary><p>No. Payday Planner never links bank accounts and never asks for bank details.</p></details>
         <details><summary>Who carries out the plan?</summary><p>You do, through your own bank or investment platform. Payday Planner recommends, but never acts for you. No returns are promised.</p></details>
         <details><summary>What is the planned price?</summary><p>The planned early-access offer is free for the first year, then ₹999 a year.</p></details>
-        <details><summary>Does trying the planner start a subscription?</summary><p>No. The current planner is free to try and takes no payment details. Under the planned future offer, the subscription would renew automatically at ₹999 a year after the free first year. You will receive multiple reminders before any payment is charged, and you can cancel anytime.</p></details>
-        <details><summary>What if my salary or expenses change?</summary><p>Update your inputs and create a new plan. The current trial allows five requests per browser.</p></details>
+        <details><summary>Does trying the planner start a subscription?</summary><p>No. Your one-plan trial is free and takes no payment details. Registration and payment setup are separate steps. Under the planned future offer, the subscription would renew automatically at ₹999 a year after the free first year. You will receive multiple reminders before any payment is charged, and you can cancel anytime.</p></details>
+        <details><summary>What if my salary or expenses change?</summary><p>Update your inputs and create a new plan. After your free trial plan, sign up to continue planning.</p></details>
         <details><summary>Are the example figures a forecast?</summary><p>No. The 30-year figures use an assumed 8% a year for illustration; actual returns vary and can be lower or negative, and the figures ignore inflation and taxes.</p></details>
         <details><summary>Where do the 30 year numbers come from?</summary><p>We assume the same amount is contributed at the end of every month for 30 years, or 360 months. The assumed annual growth rate is 8%, divided by 12 for the monthly rate. Each contribution compounds monthly for the time remaining.<span class="formula">Future value = monthly amount × ((1 + i)<sup>n</sup> − 1) / i, where i = 0.08 / 12 and n = 360.</span>The total includes the money put in plus assumed growth. Figures are rounded, before inflation and taxes, and shown in future rupees. This is an illustration, not a forecast or a promise. Real returns vary and can be lower or negative.</p></details>
         <details><summary>How is the savings split calculated?</summary><p>This trial uses a simple rule: 50% goes to the emergency buffer if you have none, 30% if you have less than three months of expenses, and 0% if you have three months or more. A planned purchase receives up to one twelfth of its cost from what remains. The rest goes to long-term investing. The first two amounts are rounded to the nearest ₹100 and limited to available savings. This rule does not consider your full financial situation or an exact purchase date.</p></details>
-        <details><summary>What happens to the figures I enter?</summary><p>Your submitted figures are sent to Google Gemini and stored with the plan and usage counts. You can use sample figures instead. The page shows only aggregate plan statistics. No name, email or bank details are needed.</p></details>
-        <details><summary>Why are there only five tries?</summary><p>The free trial allows five submitted requests per browser and has a shared daily limit. A submitted request can use a try even if the AI response fails. Changing a checkbox to view fund examples does not use another try.</p></details>
-        <details><summary>Can I sign up for the future offer?</summary><p>Registration is not open yet. You can use the free planning tool today without signing up.</p></details>
+        <details><summary>What happens to the figures I enter?</summary><p>Your submitted planning figures are sent to Google Gemini and stored with the plan and usage counts. You can use sample figures instead. The page shows only aggregate plan statistics. No name, email or bank details are needed for the trial plan.</p></details>
+        <details><summary>How does the free trial work?</summary><p>You can create one successful trial plan per browser before signing up. If an AI response fails, you can retry, up to five submitted attempts in total. The planner also has a shared daily limit. Viewing fund examples does not use another attempt.</p></details>
+        <details><summary>Can I sign up for the future offer?</summary><p>The sign-up form previews the intended journey: name, email, then secure payment setup. Registration will activate after the payment service is connected. You can try one free plan before signing up.</p></details>
       </div></div>
     </section>
     <!-- 11. Final call to action -->
-    <section class="closing" aria-labelledby="closing-title"><div class="wrap"><span class="eyebrow">Make room for your priorities</span><h2 id="closing-title">Give saving a place on payday.</h2><p>Choose an amount. See a split. Understand the reasons.</p><a class="button" href="#try-plan">Create my payday plan <span aria-hidden="true">↓</span></a></div></section>
+    <section class="closing" aria-labelledby="closing-title"><div class="wrap"><span class="eyebrow">Make room for your priorities</span><h2 id="closing-title">Give saving a place on payday.</h2><p>Try one plan, then sign up to make it a habit.</p><a class="button" href="#early-access">Sign up for my free year <span aria-hidden="true">↓</span></a></div></section>
   </main>
   <footer><div class="wrap"><strong>Payday Planner</strong><p>Illustrative savings plans for your first paydays. You make the decisions and carry them out. No returns are promised.</p></div></footer>
   <script src="/planner.js" defer></script>

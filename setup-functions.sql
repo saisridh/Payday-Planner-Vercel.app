@@ -8,6 +8,12 @@ begin
   if (select count(*) from public.payday_plans where created_at >= date_trunc('day', now() at time zone 'UTC') at time zone 'UTC') >= 100 then
     return jsonb_build_object('reason','daily');
   end if;
+  if exists(select 1 from public.payday_plans where visitor_id = p_visitor and status = 'ok') then
+    return jsonb_build_object('reason','signup');
+  end if;
+  if exists(select 1 from public.payday_plans where visitor_id = p_visitor and status = 'pending' and created_at > now() - interval '45 seconds') then
+    return jsonb_build_object('reason','pending');
+  end if;
   if (select count(*) from public.payday_plans where visitor_id = p_visitor) >= 5 then
     return jsonb_build_object('reason','visitor');
   end if;

@@ -1,11 +1,11 @@
 import {randomUUID,createHmac,timingSafeEqual} from 'node:crypto';
 import {db,configured} from '../lib/db.js';
-import {validateInput,allocation,validateOutput,normalizeZeroBuckets,NAMES} from '../lib/planning.js';
+import {validateInput,allocation,validateOutput,normalizeZeroBuckets,NAMES,PlanValidationError} from '../lib/planning.js';
 import {examplesFor} from '../lib/catalogue.js';
 import {SYSTEM_PROMPT} from '../lib/prompt.js';
 const MODEL = 'gemini-3.5-flash-lite';
 const MAX_OUTPUT_TOKENS = 600;
-function visitor(req,res) {
+export function visitor(req,res) {
   const sign = id => createHmac('sha256',process.env.SUPABASE_SERVICE_KEY).update(id).digest('hex');
   const cookie = (req.headers.cookie || '').split(';').map(s=>s.trim()).find(s=>s.startsWith('payday_visitor='))?.slice(15);
   let [id,signature] = (cookie || '').split('.');
@@ -44,8 +44,14 @@ export default async function handler(req,res) {
   let id;
   let tokens = {input_tokens:null,output_tokens:null};
   try {
-    const claim = await db('rpc/claim_payday_request',{method:'POST',body:JSON.stringify({p_visitor:visitor(req,res),p_input:logInput(raw)})});
-    if (!claim.id) return res.status(429).json({error:claim.reason === 'visitor' ? 'You have used your five tries in this browser. Thank you for trying Payday Planner.' : 'The demo has reached its daily limit. Please try tomorrow.'});
+    const visitorId=visitor(req,res);
+    const previous=await db(`payday_plans?visitor_id=eq.${visitorId}&status=eq.ok&select=id&limit=1`);
+    if(previous.length) return res.status(403).json({code:'signup_required',error:'You have created your free trial plan. Sign up to continue with Payday Planner.'});
+    const claim = await db('rpc/claim_payday_request',{method:'POST',body:JSON.stringify({p_visitor:visitorId,p_input:logInput(raw)})});
+    if (!claim.id) {
+      if(claim.reason==='signup') return res.status(403).json({code:'signup_required',error:'You have created your free trial plan. Sign up to continue with Payday Planner.'});
+      return res.status(429).json({code:claim.reason,error:claim.reason==='pending' ? 'A plan is already being generated in this browser. Please wait for it to finish.' : claim.reason==='visitor' ? 'You have reached the retry limit for this trial. Please sign up to continue.' : 'The planner has reached its daily limit. Please try tomorrow.'});
+    }
     id = claim.id;
     const save = (status,output) => db(`payday_plans?id=eq.${id}`,{method:'PATCH',body:JSON.stringify({status,output,...tokens})});
     let input;
@@ -72,8 +78,8 @@ export default async function handler(req,res) {
     const rawOutput = candidate?.content?.parts?.filter(p=>!p.thought).map(p=>p.text || '').join('') || '';
     let plan, modelPlan;
     try {
-      if (candidate?.finishReason !== 'STOP') throw new Error();
-      modelPlan = JSON.parse(rawOutput);
+      if (candidate?.finishReason !== 'STOP') throw new PlanValidationError(candidate?.finishReason === 'MAX_TOKENS' ? 'incomplete_response' : 'model_stopped',candidate?.finishReason === 'MAX_TOKENS' ? 'The AI response was cut off before the plan was complete.' : 'The AI service stopped without completing a usable plan.');
+      try { modelPlan = JSON.parse(rawOutput); } catch { throw new PlanValidationError('invalid_json','The AI response was not valid structured plan data.'); }
       plan = normalizeZeroBuckets(modelPlan,input);
       if (plan.status === 'refused') {
         // Refusal wording is fixed by the application; raw model text remains auditable.
@@ -82,9 +88,11 @@ export default async function handler(req,res) {
         return res.status(422).json(output);
       }
       validateOutput(plan,input);
-    } catch {
-      await save('error',{status:'error',reason:'Model response failed format or safety checks.',model_response:rawOutput});
-      return res.status(502).json({error:'The response did not pass our checks. Please try again.'});
+    } catch (e) {
+      const code=e instanceof PlanValidationError ? e.code : 'invalid_format';
+      const reason=e instanceof PlanValidationError ? e.message : 'The AI response did not match the required plan structure.';
+      await save('error',{status:'error',reason,code,model_response:rawOutput});
+      return res.status(502).json({code,error:'We could not show this plan. '+reason+' No plan was accepted. You can retry without using your successful trial plan.'});
     }
     const output = {...plan,buckets:plan.buckets.map((b,i)=>({...b,examples:examplesFor(b,i)})),catalogue_note:'Illustrative examples from a small HDFC Mutual Fund catalogue, not a ranking or endorsement. Other providers are available. Names checked on 5 October 2026; examples expire after 30 days without review.'};
     await save('ok',{...output,model_response:modelPlan});

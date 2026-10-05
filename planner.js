@@ -4,6 +4,15 @@ const planResult = document.getElementById('plan-result');
 const money = n => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(n);
 let latestPlan;
 let latestInput;
+let trialUsed=false;
+let trialBlocked=false;
+const signupNudge=document.getElementById("signup-nudge");
+function applyTrialState() {
+  signupNudge.hidden=!trialBlocked;
+  const button=document.getElementById("generate-plan");
+  button.disabled=trialBlocked;
+  button.textContent=trialBlocked ? "Sign up to create another plan" : "Create my payday plan";
+}
 const placeholder = document.getElementById("plan-placeholder");
 function node(tag,text,className) {
   const e = document.createElement(tag);
@@ -79,6 +88,7 @@ plannerForm.addEventListener('input',event=>{
 });
 plannerForm.addEventListener('submit',async event => {
   event.preventDefault();
+  if(trialBlocked){signupNudge.hidden=false;return;}
   if (!plannerForm.reportValidity()) return;
   const input = {
     take_home_pay:Number(document.getElementById('take-home-pay').value),
@@ -103,12 +113,33 @@ plannerForm.addEventListener('submit',async event => {
   try {
     const response = await fetch('/api/plan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input),signal:AbortSignal.timeout(28000)});
     const data = await response.json();
-    if (!response.ok || data.status !== 'ok') throw new Error(data.reason || data.error || 'The plan could not be generated.');
+    if (!response.ok || data.status !== 'ok') {
+      if(data.code==='signup_required'||data.code==='visitor'){trialBlocked=true;trialUsed=data.code==='signup_required';signupNudge.hidden=false;}
+      throw new Error(data.reason || data.error || 'The plan could not be generated.');
+    }
     latestPlan = data; latestInput = input; renderPlan(data);
+    trialUsed=true;trialBlocked=true;signupNudge.hidden=false;
     plannerStatus.textContent = 'Your plan is ready. The three amounts add up to '+money(input.amount_to_save)+'.';
     await refreshStats();
   } catch (error) {
     plannerStatus.textContent = error.name === 'TimeoutError' ? 'The request took too long. It may still complete and use a try. Please wait before retrying.' : error instanceof TypeError ? 'We could not connect. Check your connection and try again when ready.' : error.message;
-  } finally { planResult.setAttribute('aria-busy','false'); fields.forEach(field=>{field.disabled=false;}); button.disabled = false; button.textContent = 'Create my payday plan'; }
+  } finally { planResult.setAttribute('aria-busy','false'); fields.forEach(field=>{field.disabled=false;}); applyTrialState(); }
 });
 refreshStats();
+async function refreshTrial() {
+  const button=document.getElementById('generate-plan');
+  button.disabled=true;
+  try {
+    const response=await fetch('/api/trial',{cache:'no-store',signal:AbortSignal.timeout(8000)});
+    if(!response.ok) throw new Error();
+    const trial=await response.json();
+    trialUsed=trial.used;trialBlocked=trial.used||trial.retry_limit_reached;
+    if(trialBlocked) plannerStatus.textContent=trialUsed ? 'Your free trial plan is complete. Sign up to continue.' : 'This browser has reached the trial retry limit. Sign up to continue.';
+  } catch { /* The server still checks trial eligibility on every request. */ }
+  applyTrialState();
+}
+refreshTrial();
+document.getElementById('access-form').addEventListener('submit',event=>{
+  event.preventDefault();
+  document.getElementById('form-status').textContent='Secure payment setup is not connected yet. Your details have not been sent or saved, and no account or subscription has been created.';
+});

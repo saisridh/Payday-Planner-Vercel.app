@@ -54,3 +54,11 @@ where input_tokens > 0 and output_tokens is not null;
 ```
 
 Never put actual key values in this README, GitHub, screenshots or worksheet.
+
+## One-plan trial and sign-up journey
+
+Visitors get one successful public trial plan, with at most five submitted attempts to allow retries after failures. The API checks successful history; run the updated setup-functions.sql to enforce the one-plan gate and simultaneous-request guard atomically in Supabase. Existing successful rows count toward the trial.
+
+The sign-up form currently previews name/email followed by payment setup. It sends and saves no identity fields and creates no account or subscription. Authentication, hosted payment authorization, confirmed subscription access, cancellation and reminder delivery still require a payment-provider account and configuration. Do not treat the UI as active registration. Card details must never enter this code or Supabase. A registered-user allowance must be added only after authentication and subscription verification.
+
+Plan validation errors expose a static failing-check explanation and code, without rendering raw model text. Errors do not consume the successful trial, but do consume an attempt. SQL deployment is required for atomic enforcement under concurrent requests.
